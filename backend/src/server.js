@@ -13,6 +13,7 @@ import sizes from './routes/sizes.js';
 import specs from './routes/specs.js';
 import skus from './routes/skus.js';
 import prices from './routes/prices.js';
+import images from './routes/images.js';
 import imports from './routes/imports.js';
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/sizes', sizes);
 app.use('/api/specs', specs);
 app.use('/api/skus', skus);
 app.use('/api/prices', prices);
+app.use('/api/images', images);
 app.use('/api/import', imports);
 
 // 404

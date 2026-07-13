@@ -81,7 +81,7 @@ router.get('/:id', wrap(async (req, res) => {
   );
   if (!styleRes.rows.length) return res.status(404).json({ error: 'Style not found' });
 
-  const [colors, sizes] = await Promise.all([
+  const [colors, sizes, imgs] = await Promise.all([
     query('SELECT * FROM style_colors WHERE style_id = $1 ORDER BY sort_order, color_name', [req.params.id]),
     query(
       `SELECT ss.*, sp.chest_width, sp.body_length, sp.sleeve_length, sp.shoulder_width,
@@ -93,9 +93,10 @@ router.get('/:id', wrap(async (req, res) => {
         ORDER BY ss.display_order`,
       [req.params.id],
     ),
+    query('SELECT * FROM style_images WHERE style_id = $1 ORDER BY is_primary DESC, sort_order, created_at', [req.params.id]),
   ]);
 
-  res.json({ ...styleRes.rows[0], colors: colors.rows, sizes: sizes.rows });
+  res.json({ ...styleRes.rows[0], colors: colors.rows, sizes: sizes.rows, images: imgs.rows });
 }));
 
 router.post('/', wrap(async (req, res) => {

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const CAT_EMOJI = { 'T-Shirt': '👕', Hoodie: '🧥', Sweatshirt: '👚', 'Tank Top': '🎽', Polo: '👔', Cap: '🧢' };
@@ -8,6 +9,10 @@ function Info({ k, v }) {
 
 export default function StylePreview({ detail, loading }) {
   const navigate = useNavigate();
+  const [activeImg, setActiveImg] = useState(0);
+
+  // Reset the selected image whenever the style changes
+  useEffect(() => { setActiveImg(0); }, [detail?.style_id]);
 
   if (loading && !detail) return <div className="card"><div className="loading">Loading style…</div></div>;
   if (!detail) return <div className="card"><div className="empty"><div className="big">👕</div>Select a style from the list to preview it.</div></div>;
@@ -15,6 +20,8 @@ export default function StylePreview({ detail, loading }) {
   const s = detail;
   const emoji = CAT_EMOJI[s.garment_category] || '👕';
   const active = s.active && !s.discontinued;
+  const images = s.images || [];
+  const hero = images[activeImg] || images[0];
 
   return (
     <div>
@@ -46,14 +53,21 @@ export default function StylePreview({ detail, loading }) {
           <div className="pv-block">
             <div className="pv-hero">
               {s.brand_logo && <img className="brand-badge" src={s.brand_logo} alt="" onError={(e) => { e.target.style.display = 'none'; }} />}
-              {emoji}
+              {hero
+                ? <img className="pv-hero-img" src={hero.image_url} alt={hero.alt_text || s.style_name}
+                    onError={(e) => { e.target.style.display = 'none'; }} />
+                : emoji}
             </div>
-            <div className="pv-thumbs">
-              <div className="t active">{emoji}</div>
-              <div className="t">{emoji}</div>
-              <div className="t">{emoji}</div>
-              <div className="t">🧺</div>
-            </div>
+            {images.length > 0 && (
+              <div className="pv-thumbs">
+                {images.map((img, i) => (
+                  <button key={img.style_image_id} className={`t${i === activeImg ? ' active' : ''}`}
+                    onClick={() => setActiveImg(i)} title={img.alt_text || ''}>
+                    <img src={img.image_url} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="pv-block">

@@ -5,8 +5,9 @@ import { Badge } from '../lib/ui.jsx';
 import ColorsTab from './style/ColorsTab.jsx';
 import SizesTab from './style/SizesTab.jsx';
 import SkusTab from './style/SkusTab.jsx';
+import ImagesTab from './style/ImagesTab.jsx';
 
-const TABS = ['Overview', 'Colors', 'Sizes', 'SKUs'];
+const TABS = ['Overview', 'Images', 'Colors', 'Sizes', 'SKUs'];
 
 function Info({ k, v }) {
   return <div className="info-row"><span className="k">{k}</span><span className="v">{v ?? '—'}</span></div>;
@@ -69,6 +70,7 @@ export default function StyleDetail() {
         </div>
       )}
 
+      {tab === 'Images' && <ImagesTab styleId={id} />}
       {tab === 'Colors' && <ColorsTab styleId={id} />}
       {tab === 'Sizes' && <SizesTab styleId={id} />}
       {tab === 'SKUs' && <SkusTab styleId={id} />}

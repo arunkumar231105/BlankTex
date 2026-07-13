@@ -443,6 +443,30 @@ CREATE TRIGGER trg_price_updated
     BEFORE UPDATE ON supplier_sku_prices
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+
+-- =============================================================================
+-- 2.6  style_images   (one style -> many images; additive, added later)
+-- =============================================================================
+CREATE TABLE style_images (
+    style_image_id  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    style_id        UUID          NOT NULL
+        REFERENCES styles (style_id) ON DELETE CASCADE,
+    image_url       VARCHAR(500)  NOT NULL,   -- Nextcloud share link / any public image URL
+    alt_text        VARCHAR(200),             -- e.g. "Front", "Back", color name
+    is_primary      BOOLEAN       NOT NULL DEFAULT FALSE,
+    sort_order      INTEGER       NOT NULL DEFAULT 0,
+    created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX ix_style_images_style ON style_images (style_id);
+-- Only one primary image per style
+CREATE UNIQUE INDEX uq_style_image_primary ON style_images (style_id) WHERE is_primary IS TRUE;
+
+CREATE TRIGGER trg_style_images_updated
+    BEFORE UPDATE ON style_images
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 -- =============================================================================
 -- End of BlankTex Module V1 schema
 -- =============================================================================

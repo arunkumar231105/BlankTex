@@ -38,6 +38,33 @@ async function init() {
   } else {
     console.log('Schema already present. Leaving existing data untouched.');
   }
+
+  await migrate();
+}
+
+// Idempotent, additive migrations for DBs created before a feature was added.
+// Safe to run on every startup — never drops or alters existing data.
+async function migrate() {
+  await query(`
+    CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+    BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+
+    CREATE TABLE IF NOT EXISTS style_images (
+      style_image_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      style_id   UUID NOT NULL REFERENCES styles (style_id) ON DELETE CASCADE,
+      image_url  VARCHAR(500) NOT NULL,
+      alt_text   VARCHAR(200),
+      is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS ix_style_images_style ON style_images (style_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_style_image_primary ON style_images (style_id) WHERE is_primary IS TRUE;
+  `);
+  await query('DROP TRIGGER IF EXISTS trg_style_images_updated ON style_images');
+  await query('CREATE TRIGGER trg_style_images_updated BEFORE UPDATE ON style_images FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
+  console.log('Migrations applied (style_images ready).');
 }
 
 try {
