@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+**/dist/
+
+# Local dev env (the ROOT .env IS committed so the server needs no changes)
+backend/.env
+
+# Logs & OS junk
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db

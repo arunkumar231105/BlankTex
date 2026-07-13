@@ -1,0 +1,50 @@
+# BlankTex full stack: PostgreSQL + Node API + Nginx (serves built React + proxies /api).
+# Deploy:  docker compose up -d --build
+# App is served on http://<server-ip>:${APP_PORT}  (default 8097)
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-blanktex}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-blanktex_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-blanktex}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-blanktex} -d ${POSTGRES_DB:-blanktex}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-blanktex}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-blanktex_secret}
+      PGDATABASE: ${POSTGRES_DB:-blanktex}
+      PORT: 4000
+      SCHEMA_PATH: /app/blanktex_schema.sql
+    depends_on:
+      db:
+        condition: service_healthy
+    # No host port mapping — the API is only reached internally via the frontend proxy.
+    expose:
+      - "4000"
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8097}:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

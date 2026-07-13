@@ -1,0 +1,7 @@
+# Root context ignore (used by the backend image, whose build context is the repo root)
+**/node_modules
+**/dist
+**/npm-debug.log
+.git
+frontend
+backend/.env

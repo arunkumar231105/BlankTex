@@ -1,0 +1,20 @@
+// Central enum option lists — mirror the CHECK constraints in blanktex_schema.sql.
+export const SUPPLIER_TYPE = ['Distributor', 'Brand', 'Manufacturer', 'Wholesaler', 'Importer'];
+export const CATALOG_SOURCE = ['API', 'Excel Import', 'CSV Import', 'Manual Entry'];
+export const ACTIVE_INACTIVE = ['Active', 'Inactive'];
+export const WAREHOUSE_STATUS = ['Active', 'Inactive', 'Closed'];
+export const BRAND_STATUS = ['Active', 'Inactive', 'Discontinued'];
+export const DEPARTMENT = ['Sales', 'Customer Service', 'Accounts', 'Purchasing', 'Returns', 'Technical', 'Management'];
+export const CONTACT_TYPE = ['Sales', 'Customer Service', 'Accounts', 'Returns', 'Technical', 'API Support', 'Management'];
+export const CONTACT_METHOD = ['Email', 'Phone', 'WhatsApp', 'Teams', 'Slack'];
+export const WAREHOUSE_TYPE = ['Distribution Center', 'Regional Warehouse', 'Factory', 'Pickup', 'Cross Dock'];
+export const SIZE_SYSTEM = ['Adult', 'Youth', 'Toddler', 'Infant', 'Universal'];
+export const GENDER = ['Men', 'Women', 'Youth', 'Toddler', 'Infant', 'Unisex'];
+export const PRODUCT_STATUS = ['Active', 'Discontinued', 'Coming Soon'];
+export const COLOR_FAMILY = ['Black', 'White', 'Grey', 'Blue', 'Green', 'Red', 'Orange', 'Yellow', 'Purple', 'Pink', 'Brown'];
+export const CURRENCY = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'PKR', 'INR', 'AED'];
+export const GARMENT_CATEGORY = ['T-Shirt', 'Hoodie', 'Sweatshirt', 'Tank Top', 'Polo', 'Cap', 'Shorts', 'Pants', 'Jacket', 'Long Sleeve'];
+export const FIT_TYPE = ['Classic Fit', 'Retail Fit', 'Relaxed Fit', 'Slim Fit', 'Athletic Fit', 'Oversized'];
+export const SLEEVE_TYPE = ['Short Sleeve', 'Long Sleeve', 'Sleeveless', '3/4 Sleeve'];
+export const NECK_TYPE = ['Crew Neck', 'V Neck', 'Henley', 'Mock Neck', 'Collared', 'Hooded'];
+export const FABRIC_TYPE = ['Ring Spun Cotton', 'Combed Cotton', 'Carded Cotton', 'Tri Blend', 'Performance Polyester', 'Fleece', 'Garment Dyed'];
