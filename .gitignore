@@ -6,8 +6,10 @@ node_modules/
 dist/
 **/dist/
 
-# Local dev env (the ROOT .env IS committed so the server needs no changes)
+# Env / secrets — NEVER commit real credentials (only .env.example is tracked)
+.env
 backend/.env
+!.env.example
 
 # Logs & OS junk
 *.log

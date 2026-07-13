@@ -16,13 +16,15 @@ data seeded **automatically on first boot** — nothing to run by hand.
 ```bash
 git clone <your-repo-url> blanktex
 cd blanktex
+cp .env.example .env          # then edit .env and set a strong POSTGRES_PASSWORD
 docker compose up -d --build
 ```
 
 Then open **http://31.97.110.197:8097**
 
-- Public port and DB credentials live in the root **`.env`** (already set for the
-  target server). Change `APP_PORT` there to serve on a different port.
+- Public port and DB credentials live in the root **`.env`** (git-ignored — never
+  committed). `cp .env.example .env` and set `POSTGRES_PASSWORD`. Change `APP_PORT`
+  there to serve on a different port. Compose refuses to start if the password is unset.
 - Data persists in the `pgdata` Docker volume across restarts/redeploys.
 - Re-deploy after a `git pull`:  `docker compose up -d --build`
 - Logs: `docker compose logs -f`   ·   Stop: `docker compose down`

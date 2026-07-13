@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-blanktex}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-blanktex_secret}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (copy from .env.example)}
       POSTGRES_DB: ${POSTGRES_DB:-blanktex}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -26,7 +26,7 @@ services:
       PGHOST: db
       PGPORT: 5432
       PGUSER: ${POSTGRES_USER:-blanktex}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-blanktex_secret}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (copy from .env.example)}
       PGDATABASE: ${POSTGRES_DB:-blanktex}
       PORT: 4000
       SCHEMA_PATH: /app/blanktex_schema.sql
