@@ -19,7 +19,8 @@ const SIZES = [
 async function clear() {
   await query(`TRUNCATE
     supplier_sku_prices, style_color_sizes, style_size_specs, style_sizes,
-    style_colors, styles, brands, supplier_warehouses, supplier_contacts, suppliers
+    style_colors, style_images, styles, brands, manufacturers,
+    supplier_warehouses, supplier_contacts, suppliers
     RESTART IDENTITY CASCADE`);
 }
 
@@ -124,18 +125,29 @@ async function run() {
     [bella.supplier_id, ssa.supplier_id],
   );
 
+  console.log('Manufacturers…');
+  const mkMfr = async (code, name, country) => (await one(
+    `INSERT INTO manufacturers (manufacturer_code, manufacturer_name, country, status)
+     VALUES ($1,$2,$3,'Active') RETURNING manufacturer_id`,
+    [code, name, country],
+  )).manufacturer_id;
+  const mGildan = await mkMfr('GILDAN', 'Gildan Activewear', 'Canada');   // owns Gildan + Comfort Colors
+  const mBella = await mkMfr('BELLA', 'Bella+Canvas LLC', 'USA');
+  const mNext = await mkMfr('NEXTLVL', 'Next Level Apparel', 'USA');
+  const mIndie = await mkMfr('ITC', 'Independent Trading Co.', 'USA');
+
   console.log('Brands…');
-  const mkBrand = async (code, name, owner) => (await one(
-    `INSERT INTO brands (brand_code, brand_name, brand_owner, brand_logo, default_size_system,
-       default_currency, status)
-     VALUES ($1,$2,$3,$4,'Adult','USD','Active') RETURNING brand_id`,
-    [code, name, owner, `https://dummyimage.com/120x120/2f6bff/ffffff.png&text=${code}`],
+  const mkBrand = async (code, name, owner, mfrId) => (await one(
+    `INSERT INTO brands (brand_code, brand_name, brand_owner, manufacturer_id, brand_logo,
+       default_size_system, default_currency, status)
+     VALUES ($1,$2,$3,$4,$5,'Adult','USD','Active') RETURNING brand_id`,
+    [code, name, owner, mfrId, `https://dummyimage.com/120x120/2f6bff/ffffff.png&text=${code}`],
   )).brand_id;
-  const bBella = await mkBrand('BEL', 'Bella Canvas', 'Bella+Canvas LLC');
-  const bGildan = await mkBrand('GIL', 'Gildan', 'Gildan Activewear');
-  const bNext = await mkBrand('NXT', 'Next Level', 'Next Level Apparel');
-  const bComfort = await mkBrand('CC', 'Comfort Colors', 'Gildan Activewear');
-  const bIndie = await mkBrand('IND', 'Independent', 'Independent Trading Co.');
+  const bBella = await mkBrand('BEL', 'Bella Canvas', 'Bella+Canvas LLC', mBella);
+  const bGildan = await mkBrand('GIL', 'Gildan', 'Gildan Activewear', mGildan);
+  const bNext = await mkBrand('NXT', 'Next Level', 'Next Level Apparel', mNext);
+  const bComfort = await mkBrand('CC', 'Comfort Colors', 'Gildan Activewear', mGildan);
+  const bIndie = await mkBrand('IND', 'Independent', 'Independent Trading Co.', mIndie);
 
   console.log('Styles + colors + sizes + SKUs + prices…');
   await buildStyle({ brand_id: bBella, supplier_id: bella.supplier_id, style_no: '3001', short_name: 'BC3001',

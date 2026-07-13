@@ -1,47 +1,44 @@
+import { useEffect, useState } from 'react';
+import { api } from '../api.js';
 import ResourceManager from '../ui/ResourceManager.jsx';
-import { Badge } from '../lib/ui.jsx';
-import { SIZE_SYSTEM, CURRENCY, BRAND_STATUS } from '../lib/enums.js';
-
-const fields = [
-  { name: 'brand_code', label: 'Brand Code', required: true, hint: 'Short code, e.g. GIL' },
-  { name: 'brand_name', label: 'Brand Name', required: true },
-  { name: 'brand_owner', label: 'Brand Owner' },
-  { name: 'default_size_system', label: 'Default Size System', type: 'select', options: SIZE_SYSTEM, required: true, default: 'Adult' },
-  { name: 'default_currency', label: 'Currency', type: 'select', options: CURRENCY, required: true, default: 'USD' },
-  { name: 'status', label: 'Status', type: 'select', options: BRAND_STATUS, required: true, default: 'Active' },
-  { name: 'website', label: 'Website', type: 'url' },
-  { name: 'country_of_origin', label: 'Country of Origin' },
-  { name: 'brand_logo', label: 'Brand Logo', type: 'image',
-    hint: 'Paste the Nextcloud share link (or any public image URL). Preview shows below and is saved to the database.' },
-  { name: 'remarks', label: 'Remarks', type: 'textarea', full: true },
-];
-
-const columns = [
-  { key: 'brand_logo', label: 'Logo', width: 60, render: (r) => (
-      r.brand_logo
-        ? <img className="logo-cell" src={r.brand_logo} alt="" onError={(e) => { e.target.style.visibility = 'hidden'; }} />
-        : <span className="logo-cell" style={{ display: 'inline-grid', placeItems: 'center', fontSize: 11, color: '#9aa4b2' }}>—</span>
-    ) },
-  { key: 'brand_code', label: 'Code', render: (r) => <b>{r.brand_code}</b> },
-  { key: 'brand_name', label: 'Brand' },
-  { key: 'brand_owner', label: 'Owner' },
-  { key: 'default_size_system', label: 'Size System' },
-  { key: 'status', label: 'Status', render: (r) => <Badge value={r.status} /> },
-];
+import { brandFields, brandLogoCol, brandStatusCol } from '../lib/brandFields.jsx';
 
 export default function Brands() {
+  const [manufacturers, setManufacturers] = useState([]);
+
+  useEffect(() => { api.list('manufacturers').then(setManufacturers).catch(() => {}); }, []);
+
+  const mfrOpts = manufacturers.map((m) => ({ value: m.manufacturer_id, label: m.manufacturer_name }));
+
+  // Insert the manufacturer picker right after brand_owner
+  const fields = [
+    ...brandFields.slice(0, 3),
+    { name: 'manufacturer_id', label: 'Manufacturer', type: 'select', options: mfrOpts,
+      hint: 'The company that owns this brand (one manufacturer → many brands)' },
+    ...brandFields.slice(3),
+  ];
+
+  const columns = [
+    brandLogoCol,
+    { key: 'brand_code', label: 'Code', render: (r) => <b>{r.brand_code}</b> },
+    { key: 'brand_name', label: 'Brand' },
+    { key: 'manufacturer_name', label: 'Manufacturer', render: (r) => r.manufacturer_name || <span style={{ color: 'var(--muted2)' }}>—</span> },
+    { key: 'default_size_system', label: 'Size System' },
+    brandStatusCol,
+  ];
+
   return (
     <>
       <div className="page-head">
         <div>
           <div className="page-title">Brands</div>
-          <div className="page-desc">Apparel brands in your catalog. Logos are stored as an image link (e.g. Nextcloud share URL).</div>
+          <div className="page-desc">Apparel brands. Each brand can belong to a manufacturer (e.g. Gildan &amp; Comfort Colors → Gildan Activewear).</div>
         </div>
       </div>
       <ResourceManager
         title="Brands" singular="Brand" resource="brands" idKey="brand_id"
         columns={columns} fields={fields}
-        searchKeys={['brand_code', 'brand_name', 'brand_owner']}
+        searchKeys={['brand_code', 'brand_name', 'brand_owner', 'manufacturer_name']}
         importConfig={{
           entity: 'brands',
           title: 'Brands',

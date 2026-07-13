@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 const CATALOG = [
   ['/', '▦', 'Dashboard'],
   ['/suppliers', '🚚', 'Suppliers'],
+  ['/manufacturers', '🏭', 'Manufacturers'],
   ['/brands', '◈', 'Brands'],
   ['/styles', '👕', 'Styles'],
 ];

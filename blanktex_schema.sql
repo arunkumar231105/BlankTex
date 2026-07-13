@@ -467,6 +467,35 @@ CREATE TRIGGER trg_style_images_updated
     BEFORE UPDATE ON style_images
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+
+-- =============================================================================
+-- 2.7  manufacturers   (one manufacturer -> many brands; additive)
+-- =============================================================================
+CREATE TABLE manufacturers (
+    manufacturer_id    UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    manufacturer_code  VARCHAR(20),
+    manufacturer_name  VARCHAR(150)  NOT NULL,
+    country            VARCHAR(100),
+    website            VARCHAR(255),
+    status             VARCHAR(20)   NOT NULL DEFAULT 'Active'
+        CHECK (status IN ('Active','Inactive')),
+    remarks            TEXT,
+    created_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    updated_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT uq_manufacturer_code UNIQUE (manufacturer_code),
+    CONSTRAINT uq_manufacturer_name UNIQUE (manufacturer_name)
+);
+
+CREATE TRIGGER trg_manufacturers_updated
+    BEFORE UPDATE ON manufacturers
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Link brands to their manufacturer (nullable — a brand may have no manufacturer set)
+ALTER TABLE brands ADD COLUMN manufacturer_id UUID
+    REFERENCES manufacturers (manufacturer_id) ON DELETE SET NULL;
+CREATE INDEX ix_brands_manufacturer ON brands (manufacturer_id);
+
 -- =============================================================================
 -- End of BlankTex Module V1 schema
 -- =============================================================================

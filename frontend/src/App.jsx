@@ -5,11 +5,13 @@ import Topbar from './components/Topbar.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Suppliers from './pages/Suppliers.jsx';
 import SupplierDetail from './pages/SupplierDetail.jsx';
+import Manufacturers from './pages/Manufacturers.jsx';
+import ManufacturerDetail from './pages/ManufacturerDetail.jsx';
 import Brands from './pages/Brands.jsx';
 import Styles from './pages/Styles.jsx';
 import StyleDetail from './pages/StyleDetail.jsx';
 
-const CRUMBS = { '': 'Dashboard', suppliers: 'Suppliers', brands: 'Brands', styles: 'Styles' };
+const CRUMBS = { '': 'Dashboard', suppliers: 'Suppliers', manufacturers: 'Manufacturers', brands: 'Brands', styles: 'Styles' };
 
 export default function App() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('bt_sidebar') === '1');
@@ -34,6 +36,8 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/suppliers/:id" element={<SupplierDetail />} />
+            <Route path="/manufacturers" element={<Manufacturers />} />
+            <Route path="/manufacturers/:id" element={<ManufacturerDetail />} />
             <Route path="/brands" element={<Brands />} />
             <Route path="/styles" element={<Styles />} />
             <Route path="/styles/:id" element={<StyleDetail />} />

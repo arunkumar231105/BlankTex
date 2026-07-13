@@ -61,10 +61,27 @@ async function migrate() {
     );
     CREATE INDEX IF NOT EXISTS ix_style_images_style ON style_images (style_id);
     CREATE UNIQUE INDEX IF NOT EXISTS uq_style_image_primary ON style_images (style_id) WHERE is_primary IS TRUE;
+
+    CREATE TABLE IF NOT EXISTS manufacturers (
+      manufacturer_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      manufacturer_code VARCHAR(20) UNIQUE,
+      manufacturer_name VARCHAR(150) NOT NULL UNIQUE,
+      country           VARCHAR(100),
+      website           VARCHAR(255),
+      status            VARCHAR(20) NOT NULL DEFAULT 'Active',
+      remarks           TEXT,
+      created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    ALTER TABLE brands ADD COLUMN IF NOT EXISTS manufacturer_id UUID
+      REFERENCES manufacturers (manufacturer_id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS ix_brands_manufacturer ON brands (manufacturer_id);
   `);
   await query('DROP TRIGGER IF EXISTS trg_style_images_updated ON style_images');
   await query('CREATE TRIGGER trg_style_images_updated BEFORE UPDATE ON style_images FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
-  console.log('Migrations applied (style_images ready).');
+  await query('DROP TRIGGER IF EXISTS trg_manufacturers_updated ON manufacturers');
+  await query('CREATE TRIGGER trg_manufacturers_updated BEFORE UPDATE ON manufacturers FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
+  console.log('Migrations applied (style_images, manufacturers ready).');
 }
 
 try {
