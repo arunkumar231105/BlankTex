@@ -17,6 +17,8 @@ import prices from './routes/prices.js';
 import images from './routes/images.js';
 import imports from './routes/imports.js';
 import decorations from './routes/decorations.js';
+import auth from './routes/auth.js';
+import { authRequired } from './auth.js';
 
 const app = express();
 app.use(cors());
@@ -29,6 +31,9 @@ app.use((req, _res, next) => {
 });
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'blanktex-api' }));
+
+app.use('/api/auth', auth);
+app.use('/api', authRequired);
 
 app.use('/api/dashboard', dashboard);
 app.use('/api/suppliers', suppliers);

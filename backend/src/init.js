@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { pool, query } from './db.js';
 import { seedCatalogIfSafe, syncCatalogColors } from './catalog.js';
+import { seedAdminFromEnv } from './auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCHEMA_PATH = process.env.SCHEMA_PATH || join(__dirname, '..', '..', 'blanktex_schema.sql');
@@ -41,6 +42,8 @@ async function init() {
   }
 
   await migrate();
+  const adminResult = await seedAdminFromEnv();
+  console.log('Admin auth:', adminResult);
   const catalogResult = await seedCatalogIfSafe();
   console.log('Catalog init:', catalogResult);
   const colorResult = await syncCatalogColors();
@@ -114,6 +117,28 @@ async function migrate() {
       source_description TEXT,
       imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS admin_users (
+      user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email VARCHAR(255) NOT NULL,
+      password_hash TEXT NOT NULL,
+      display_name VARCHAR(120) NOT NULL DEFAULT 'Admin',
+      role VARCHAR(30) NOT NULL DEFAULT 'admin',
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_admin_users_email_lower ON admin_users (LOWER(email));
+
+    CREATE TABLE IF NOT EXISTS auth_sessions (
+      session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES admin_users (user_id) ON DELETE CASCADE,
+      token_hash CHAR(64) NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS ix_auth_sessions_user ON auth_sessions (user_id);
+    CREATE INDEX IF NOT EXISTS ix_auth_sessions_expiry ON auth_sessions (expires_at);
   `);
   await query('DROP TRIGGER IF EXISTS trg_style_images_updated ON style_images');
   await query('CREATE TRIGGER trg_style_images_updated BEFORE UPDATE ON style_images FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
@@ -121,6 +146,8 @@ async function migrate() {
   await query('CREATE TRIGGER trg_manufacturers_updated BEFORE UPDATE ON manufacturers FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
   await query('DROP TRIGGER IF EXISTS trg_style_decorations_updated ON style_decorations');
   await query('CREATE TRIGGER trg_style_decorations_updated BEFORE UPDATE ON style_decorations FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
+  await query('DROP TRIGGER IF EXISTS trg_admin_users_updated ON admin_users');
+  await query('CREATE TRIGGER trg_admin_users_updated BEFORE UPDATE ON admin_users FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
   console.log('Migrations applied (catalog measurements and decorations ready).');
 }
 

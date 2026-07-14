@@ -535,5 +535,35 @@ CREATE TABLE catalog_meta (
 );
 
 -- =============================================================================
+-- Authentication (admin users and server-side sessions)
+-- =============================================================================
+CREATE TABLE admin_users (
+    user_id        UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    email          VARCHAR(255) NOT NULL,
+    password_hash  TEXT         NOT NULL,
+    display_name   VARCHAR(120) NOT NULL DEFAULT 'Admin',
+    role           VARCHAR(30)  NOT NULL DEFAULT 'admin',
+    active         BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX uq_admin_users_email_lower ON admin_users (LOWER(email));
+CREATE TRIGGER trg_admin_users_updated
+    BEFORE UPDATE ON admin_users
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE auth_sessions (
+    session_id UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID        NOT NULL REFERENCES admin_users (user_id) ON DELETE CASCADE,
+    token_hash CHAR(64)    NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX ix_auth_sessions_user ON auth_sessions (user_id);
+CREATE INDEX ix_auth_sessions_expiry ON auth_sessions (expires_at);
+
+-- =============================================================================
 -- End of BlankTex Module V1 schema
 -- =============================================================================

@@ -30,6 +30,8 @@ services:
       PGDATABASE: ${POSTGRES_DB:-blanktex}
       PORT: 4000
       SCHEMA_PATH: /app/blanktex_schema.sql
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
     depends_on:
       db:
         condition: service_healthy

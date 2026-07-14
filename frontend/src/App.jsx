@@ -10,10 +10,13 @@ import ManufacturerDetail from './pages/ManufacturerDetail.jsx';
 import Brands from './pages/Brands.jsx';
 import Styles from './pages/Styles.jsx';
 import StyleDetail from './pages/StyleDetail.jsx';
+import Login from './pages/Login.jsx';
+import { useAuth } from './auth/AuthContext.jsx';
 
 const CRUMBS = { '': 'Dashboard', suppliers: 'Suppliers', manufacturers: 'Manufacturers', brands: 'Brands', styles: 'Styles' };
 
 export default function App() {
+  const { user, loading, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('bt_sidebar') === '1');
   const { pathname } = useLocation();
 
@@ -26,11 +29,16 @@ export default function App() {
 
   const crumb = CRUMBS[pathname.split('/')[1]] || 'BlankTex';
 
+  if (loading) {
+    return <div className="auth-loading"><div className="auth-loading-mark">▣</div><span>Loading BlankTex…</span></div>;
+  }
+  if (!user) return <Login />;
+
   return (
     <div className={`app${collapsed ? ' collapsed' : ''}`}>
       <Sidebar />
       <div className="main">
-        <Topbar onToggle={toggle} crumb={crumb} />
+        <Topbar onToggle={toggle} crumb={crumb} user={user} onLogout={logout} />
         <div className="content">
           <Routes>
             <Route path="/" element={<Dashboard />} />

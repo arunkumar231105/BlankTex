@@ -9,12 +9,16 @@ function qs(params = {}) {
 async function request(path, options = {}) {
   const res = await fetch(BASE + path, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
     ...options,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
     try { const b = await res.json(); msg = b.error || msg; } catch { /* ignore */ }
+    if (res.status === 401 && !path.startsWith('/auth/')) {
+      window.dispatchEvent(new Event('blanktex:unauthorized'));
+    }
     throw new Error(msg);
   }
   if (res.status === 204) return null;
@@ -22,6 +26,10 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  login: (email, password) => request('/auth/login', { method: 'POST', body: { email, password } }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
+  authMe: () => request('/auth/me'),
+
   // generic CRUD — resource is the route namespace (e.g. 'suppliers')
   list: (resource, params) => request(`/${resource}${qs(params)}`),
   get: (resource, id) => request(`/${resource}/${id}`),
