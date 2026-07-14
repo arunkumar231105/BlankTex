@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ColorizedProductImage from './ColorizedProductImage';
 
 const CAT_EMOJI = { 'T-Shirt': '👕', Hoodie: '🧥', Sweatshirt: '👚', 'Tank Top': '🎽', Polo: '👔', Cap: '🧢' };
 
@@ -59,8 +60,13 @@ export default function StylePreview({ detail, loading }) {
             <div className="pv-hero" style={{ '--selected-color': selectedColor?.hex_color || '#d7dce5' }}>
               {s.brand_logo && <img className="brand-badge" src={s.brand_logo} alt="" onError={(e) => { e.target.style.display = 'none'; }} />}
               {hero
-                ? <img className="pv-hero-img" src={hero.image_url} alt={hero.alt_text || s.style_name}
-                    onError={(e) => { e.target.style.display = 'none'; }} />
+                ? <div className="pv-artwork">
+                    <ColorizedProductImage
+                      src={hero.image_url}
+                      color={selectedColor?.hex_color}
+                      alt={hero.alt_text || s.style_name}
+                    />
+                  </div>
                 : emoji}
               {selectedColor && (
                 <div className="pv-selected-color">
