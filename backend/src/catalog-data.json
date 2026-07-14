@@ -26,115 +26,131 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "BE01",
-          "color_name": "Be01",
-          "display_name": "Be01",
+          "color_name": "Navy Blue",
+          "display_name": "Navy Blue",
           "internal_color_code": "BE01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#1F2A44"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "AP01",
-          "color_name": "Ap01",
-          "display_name": "Ap01",
+          "color_name": "Apricot",
+          "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#F4C7A1"
         },
         {
           "supplier_color_code": "BU01",
-          "color_name": "Bu01",
-          "display_name": "Bu01",
+          "color_name": "Blue",
+          "display_name": "Blue",
           "internal_color_code": "BU01",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#2563EB"
         },
         {
           "supplier_color_code": "GN01",
-          "color_name": "Gn01",
-          "display_name": "Gn01",
+          "color_name": "Green",
+          "display_name": "Green",
           "internal_color_code": "GN01",
-          "sort_order": 7
+          "sort_order": 7,
+          "hex_color": "#2E7D32"
         },
         {
           "supplier_color_code": "RE01",
-          "color_name": "Re01",
-          "display_name": "Re01",
+          "color_name": "Rose Red",
+          "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 8
+          "sort_order": 8,
+          "hex_color": "#C2185B"
         },
         {
           "supplier_color_code": "ORANGE",
           "color_name": "Orange",
           "display_name": "Orange",
           "internal_color_code": "ORANGE",
-          "sort_order": 9
+          "sort_order": 9,
+          "hex_color": "#F97316"
         },
         {
           "supplier_color_code": "POWDER BLUE",
           "color_name": "Powder Blue",
           "display_name": "Powder Blue",
           "internal_color_code": "POWDER_BLUE",
-          "sort_order": 10
+          "sort_order": 10,
+          "hex_color": "#B0E0E6"
         },
         {
           "supplier_color_code": "LIGHT PINK",
           "color_name": "Light Pink",
           "display_name": "Light Pink",
           "internal_color_code": "LIGHT_PINK",
-          "sort_order": 11
+          "sort_order": 11,
+          "hex_color": "#F8BBD0"
         },
         {
           "supplier_color_code": "MAROON",
           "color_name": "Maroon",
           "display_name": "Maroon",
           "internal_color_code": "MAROON",
-          "sort_order": 12
+          "sort_order": 12,
+          "hex_color": "#7F1D1D"
         },
         {
           "supplier_color_code": "SAND",
           "color_name": "Sand",
           "display_name": "Sand",
           "internal_color_code": "SAND",
-          "sort_order": 13
+          "sort_order": 13,
+          "hex_color": "#D6C2A5"
         },
         {
           "supplier_color_code": "NATURAL",
-          "color_name": "自然色 Natural",
-          "display_name": "自然色 Natural",
+          "color_name": "Natural",
+          "display_name": "Natural",
           "internal_color_code": "NATURAL",
-          "sort_order": 14
+          "sort_order": 14,
+          "hex_color": "#E8DFC8"
         },
         {
           "supplier_color_code": "CHOCOLATE",
-          "color_name": "巧克力色  Chocolate",
-          "display_name": "巧克力色  Chocolate",
+          "color_name": "Chocolate",
+          "display_name": "Chocolate",
           "internal_color_code": "CHOCOLATE",
-          "sort_order": 15
+          "sort_order": 15,
+          "hex_color": "#5C3317"
         },
         {
           "supplier_color_code": "GOLD",
-          "color_name": "黄金色 Gold",
-          "display_name": "黄金色 Gold",
+          "color_name": "Gold",
+          "display_name": "Gold",
           "internal_color_code": "GOLD",
-          "sort_order": 16
+          "sort_order": 16,
+          "hex_color": "#D4A017"
         }
       ],
       "sizes": [
@@ -1163,59 +1179,67 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "GR03",
-          "color_name": "Gr03",
-          "display_name": "Gr03",
+          "color_name": "Washed Grey",
+          "display_name": "Washed Grey",
           "internal_color_code": "GR03",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#777777"
         },
         {
           "supplier_color_code": "AP01",
-          "color_name": "Ap01",
-          "display_name": "Ap01",
+          "color_name": "Apricot",
+          "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#F4C7A1"
         },
         {
           "supplier_color_code": "CF01",
-          "color_name": "Cf01",
-          "display_name": "Cf01",
+          "color_name": "Coffee",
+          "display_name": "Coffee",
           "internal_color_code": "CF01",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#6F4E37"
         },
         {
           "supplier_color_code": "BU01",
-          "color_name": "Bu01",
-          "display_name": "Bu01",
+          "color_name": "Blue",
+          "display_name": "Blue",
           "internal_color_code": "BU01",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#2563EB"
         },
         {
           "supplier_color_code": "GN01",
-          "color_name": "Gn01",
-          "display_name": "Gn01",
+          "color_name": "Green",
+          "display_name": "Green",
           "internal_color_code": "GN01",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#2E7D32"
         },
         {
           "supplier_color_code": "VT01",
-          "color_name": "Vt01",
-          "display_name": "Vt01",
+          "color_name": "Purple",
+          "display_name": "Purple",
           "internal_color_code": "VT01",
-          "sort_order": 7
+          "sort_order": 7,
+          "hex_color": "#7E22CE"
         },
         {
           "supplier_color_code": "RE01",
-          "color_name": "Re01",
-          "display_name": "Re01",
+          "color_name": "Rose Red",
+          "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 8
+          "sort_order": 8,
+          "hex_color": "#C2185B"
         }
       ],
       "sizes": [
@@ -1825,45 +1849,51 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "GN01",
-          "color_name": "Gn01",
-          "display_name": "Gn01",
+          "color_name": "Green",
+          "display_name": "Green",
           "internal_color_code": "GN01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#2E7D32"
         },
         {
           "supplier_color_code": "VT01",
-          "color_name": "Vt01",
-          "display_name": "Vt01",
+          "color_name": "Purple",
+          "display_name": "Purple",
           "internal_color_code": "VT01",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#7E22CE"
         },
         {
           "supplier_color_code": "RE01",
-          "color_name": "Re01",
-          "display_name": "Re01",
+          "color_name": "Rose Red",
+          "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#C2185B"
         },
         {
           "supplier_color_code": "NG01",
-          "color_name": "Ng01",
-          "display_name": "Ng01",
+          "color_name": "Neon Green",
+          "display_name": "Neon Green",
           "internal_color_code": "NG01",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#39FF14"
         }
       ],
       "sizes": [
@@ -2242,91 +2272,104 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BLACK",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WHITE",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WHITE",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "RED",
-          "color_name": "红色 Red",
-          "display_name": "红色 Red",
+          "color_name": "Red",
+          "display_name": "Red",
           "internal_color_code": "RED",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#DC2626"
         },
         {
           "supplier_color_code": "BLUE JEAN",
-          "color_name": "牛仔蓝编码 Blue Jean",
-          "display_name": "牛仔蓝编码 Blue Jean",
+          "color_name": "Blue Jean",
+          "display_name": "Blue Jean",
           "internal_color_code": "BLUE_JEAN",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#4F6D8A"
         },
         {
           "supplier_color_code": "ESPRESSO",
-          "color_name": "浓咖色编码 Espresso",
-          "display_name": "浓咖色编码 Espresso",
+          "color_name": "Espresso",
+          "display_name": "Espresso",
           "internal_color_code": "ESPRESSO",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#3C2415"
         },
         {
           "supplier_color_code": "IVORY",
-          "color_name": "象牙白 Ivory",
-          "display_name": "象牙白 Ivory",
+          "color_name": "Ivory",
+          "display_name": "Ivory",
           "internal_color_code": "IVORY",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#FFFFF0"
         },
         {
           "supplier_color_code": "MOSS",
-          "color_name": "苔绿色 Moss",
-          "display_name": "苔绿色 Moss",
+          "color_name": "Moss",
+          "display_name": "Moss",
           "internal_color_code": "MOSS",
-          "sort_order": 7
+          "sort_order": 7,
+          "hex_color": "#6B7B3E"
         },
         {
           "supplier_color_code": "ORCHID",
-          "color_name": "兰花紫 Orchid",
-          "display_name": "兰花紫 Orchid",
+          "color_name": "Orchid",
+          "display_name": "Orchid",
           "internal_color_code": "ORCHID",
-          "sort_order": 8
+          "sort_order": 8,
+          "hex_color": "#DA70D6"
         },
         {
           "supplier_color_code": "PEPPER",
-          "color_name": "黑胡椒色 Pepper",
-          "display_name": "黑胡椒色 Pepper",
+          "color_name": "Pepper",
+          "display_name": "Pepper",
           "internal_color_code": "PEPPER",
-          "sort_order": 9
+          "sort_order": 9,
+          "hex_color": "#4A4A4A"
         },
         {
           "supplier_color_code": "SANDSTONE",
-          "color_name": "砂岩色 Sandstone",
-          "display_name": "砂岩色 Sandstone",
+          "color_name": "Sandstone",
+          "display_name": "Sandstone",
           "internal_color_code": "SANDSTONE",
-          "sort_order": 10
+          "sort_order": 10,
+          "hex_color": "#C9A77C"
         },
         {
           "supplier_color_code": "SEAFOAM",
-          "color_name": "海泡绿 Seafoam",
-          "display_name": "海泡绿 Seafoam",
+          "color_name": "Seafoam",
+          "display_name": "Seafoam",
           "internal_color_code": "SEAFOAM",
-          "sort_order": 11
+          "sort_order": 11,
+          "hex_color": "#93E9BE"
         },
         {
           "supplier_color_code": "VIOLET",
-          "color_name": "紫罗兰 Violet",
-          "display_name": "紫罗兰 Violet",
+          "color_name": "Violet",
+          "display_name": "Violet",
           "internal_color_code": "VIOLET",
-          "sort_order": 12
+          "sort_order": 12,
+          "hex_color": "#8B5CF6"
         },
         {
           "supplier_color_code": "YAM",
-          "color_name": "红紫色 Yam",
-          "display_name": "红紫色 Yam",
+          "color_name": "Yam",
+          "display_name": "Yam",
           "internal_color_code": "YAM",
-          "sort_order": 13
+          "sort_order": 13,
+          "hex_color": "#C05A32"
         }
       ],
       "sizes": [
@@ -2904,161 +2947,184 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BLACK",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WHITE",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WHITE",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "ORANGE",
           "color_name": "Orange",
           "display_name": "Orange",
           "internal_color_code": "ORANGE",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#F97316"
         },
         {
           "supplier_color_code": "RED",
-          "color_name": "红色 Red",
-          "display_name": "红色 Red",
+          "color_name": "Red",
+          "display_name": "Red",
           "internal_color_code": "RED",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#DC2626"
         },
         {
           "supplier_color_code": "DARK HEATHER",
           "color_name": "Dark Heather",
           "display_name": "Dark Heather",
           "internal_color_code": "DARK_HEATHER",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#4B5563"
         },
         {
           "supplier_color_code": "FOREST GREEN",
           "color_name": "Forest Green",
           "display_name": "Forest Green",
           "internal_color_code": "FOREST_GREEN",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#14532D"
         },
         {
           "supplier_color_code": "IRISH GREEN",
-          "color_name": "爱尔兰绿编码 Irish Green",
-          "display_name": "爱尔兰绿编码 Irish Green",
+          "color_name": "Irish Green",
+          "display_name": "Irish Green",
           "internal_color_code": "IRISH_GREEN",
-          "sort_order": 7
+          "sort_order": 7,
+          "hex_color": "#009A44"
         },
         {
           "supplier_color_code": "LIGHT BLUE",
-          "color_name": "Powder Blue",
-          "display_name": "Powder Blue",
+          "color_name": "Light Blue",
+          "display_name": "Light Blue",
           "internal_color_code": "LIGHT_BLUE",
-          "sort_order": 8
+          "sort_order": 8,
+          "hex_color": "#87CEEB"
         },
         {
           "supplier_color_code": "LIGHT PINK",
           "color_name": "Light Pink",
           "display_name": "Light Pink",
           "internal_color_code": "LIGHT_PINK",
-          "sort_order": 9
+          "sort_order": 9,
+          "hex_color": "#F8BBD0"
         },
         {
           "supplier_color_code": "MAROON",
           "color_name": "Maroon",
           "display_name": "Maroon",
           "internal_color_code": "MAROON",
-          "sort_order": 10
+          "sort_order": 10,
+          "hex_color": "#7F1D1D"
         },
         {
           "supplier_color_code": "MILITARY GREEN",
           "color_name": "Military Green",
           "display_name": "Military Green",
           "internal_color_code": "MILITARY_GREEN",
-          "sort_order": 11
+          "sort_order": 11,
+          "hex_color": "#4B5320"
         },
         {
           "supplier_color_code": "NAVY",
-          "color_name": "海军蓝 Navy",
-          "display_name": "海军蓝 Navy",
+          "color_name": "Navy",
+          "display_name": "Navy",
           "internal_color_code": "NAVY",
-          "sort_order": 12
+          "sort_order": 12,
+          "hex_color": "#1F2A44"
         },
         {
           "supplier_color_code": "PURPLE",
           "color_name": "Purple",
           "display_name": "Purple",
           "internal_color_code": "PURPLE",
-          "sort_order": 13
+          "sort_order": 13,
+          "hex_color": "#7E22CE"
         },
         {
           "supplier_color_code": "ROYAL",
-          "color_name": "皇家蓝 Royal",
-          "display_name": "皇家蓝 Royal",
+          "color_name": "Royal Blue",
+          "display_name": "Royal Blue",
           "internal_color_code": "ROYAL",
-          "sort_order": 14
+          "sort_order": 14,
+          "hex_color": "#4169E1"
         },
         {
           "supplier_color_code": "SAND",
           "color_name": "Sand",
           "display_name": "Sand",
           "internal_color_code": "SAND",
-          "sort_order": 15
+          "sort_order": 15,
+          "hex_color": "#D6C2A5"
         },
         {
           "supplier_color_code": "SPORT GREY",
           "color_name": "Sport Grey",
           "display_name": "Sport Grey",
           "internal_color_code": "SPORT_GREY",
-          "sort_order": 16
+          "sort_order": 16,
+          "hex_color": "#B7B7B7"
         },
         {
           "supplier_color_code": "GARNET",
-          "color_name": "暗红色 Garnet",
-          "display_name": "暗红色 Garnet",
+          "color_name": "Garnet",
+          "display_name": "Garnet",
           "internal_color_code": "GARNET",
-          "sort_order": 17
+          "sort_order": 17,
+          "hex_color": "#7C0A02"
         },
         {
           "supplier_color_code": "KIWI",
-          "color_name": "淡绿色 Kiwi",
-          "display_name": "淡绿色 Kiwi",
+          "color_name": "Kiwi",
+          "display_name": "Kiwi",
           "internal_color_code": "KIWI",
-          "sort_order": 18
+          "sort_order": 18,
+          "hex_color": "#8DB600"
         },
         {
           "supplier_color_code": "CHARCOAL",
-          "color_name": "木炭色 Charcoal",
-          "display_name": "木炭色 Charcoal",
+          "color_name": "Charcoal",
+          "display_name": "Charcoal",
           "internal_color_code": "CHARCOAL",
-          "sort_order": 19
+          "sort_order": 19,
+          "hex_color": "#36454F"
         },
         {
           "supplier_color_code": "NATURAL",
-          "color_name": "自然色 Natural",
-          "display_name": "自然色 Natural",
+          "color_name": "Natural",
+          "display_name": "Natural",
           "internal_color_code": "NATURAL",
-          "sort_order": 20
+          "sort_order": 20,
+          "hex_color": "#E8DFC8"
         },
         {
           "supplier_color_code": "GRAPHITE HEATHER",
-          "color_name": "碳灰 Graphite Heather",
-          "display_name": "碳灰 Graphite Heather",
+          "color_name": "Graphite Heather",
+          "display_name": "Graphite Heather",
           "internal_color_code": "GRAPHITE_HEATHER",
-          "sort_order": 21
+          "sort_order": 21,
+          "hex_color": "#5B5D60"
         },
         {
           "supplier_color_code": "MIDNIGHT NAVY",
-          "color_name": "午夜蓝 Midnight Navy",
-          "display_name": "午夜蓝 Midnight Navy",
+          "color_name": "Midnight Navy",
+          "display_name": "Midnight Navy",
           "internal_color_code": "MIDNIGHT_NAVY",
-          "sort_order": 22
+          "sort_order": 22,
+          "hex_color": "#191970"
         },
         {
           "supplier_color_code": "ASH",
-          "color_name": "雾灰色 Ash",
-          "display_name": "雾灰色 Ash",
+          "color_name": "Ash",
+          "display_name": "Ash",
           "internal_color_code": "ASH",
-          "sort_order": 23
+          "sort_order": 23,
+          "hex_color": "#D6D3D1"
         }
       ],
       "sizes": [
@@ -4461,17 +4527,19 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         }
       ],
       "sizes": [
@@ -4740,66 +4808,75 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "BE01",
-          "color_name": "Be01",
-          "display_name": "Be01",
+          "color_name": "Navy Blue",
+          "display_name": "Navy Blue",
           "internal_color_code": "BE01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#1F2A44"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "AP01",
-          "color_name": "Ap01",
-          "display_name": "Ap01",
+          "color_name": "Apricot",
+          "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#F4C7A1"
         },
         {
           "supplier_color_code": "RE01",
-          "color_name": "Re01",
-          "display_name": "Re01",
+          "color_name": "Rose Red",
+          "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#C2185B"
         },
         {
           "supplier_color_code": "GN01",
-          "color_name": "Gn01",
-          "display_name": "Gn01",
+          "color_name": "Green",
+          "display_name": "Green",
           "internal_color_code": "GN01",
-          "sort_order": 7
+          "sort_order": 7,
+          "hex_color": "#2E7D32"
         },
         {
           "supplier_color_code": "RED",
           "color_name": "Red",
           "display_name": "Red",
           "internal_color_code": "RED",
-          "sort_order": 8
+          "sort_order": 8,
+          "hex_color": "#DC2626"
         },
         {
           "supplier_color_code": "BW01",
-          "color_name": "Bw01",
-          "display_name": "Bw01",
+          "color_name": "Brown",
+          "display_name": "Brown",
           "internal_color_code": "BW01",
-          "sort_order": 9
+          "sort_order": 9,
+          "hex_color": "#8B4513"
         }
       ],
       "sizes": [
@@ -5387,24 +5464,27 @@
       "colors": [
         {
           "supplier_color_code": "BE01",
-          "color_name": "Be01",
-          "display_name": "Be01",
+          "color_name": "Navy Blue",
+          "display_name": "Navy Blue",
           "internal_color_code": "BE01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#1F2A44"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "AP01",
-          "color_name": "Ap01",
-          "display_name": "Ap01",
+          "color_name": "Apricot",
+          "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#F4C7A1"
         }
       ],
       "sizes": [
@@ -5614,38 +5694,43 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "AP01",
-          "color_name": "Ap01",
-          "display_name": "Ap01",
+          "color_name": "Apricot",
+          "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#F4C7A1"
         },
         {
           "supplier_color_code": "RED",
           "color_name": "Red",
           "display_name": "Red",
           "internal_color_code": "RED",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#DC2626"
         },
         {
           "supplier_color_code": "HEATHER GREY",
           "color_name": "Heather Grey",
           "display_name": "Heather Grey",
           "internal_color_code": "HEATHER_GREY",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#A7A9AC"
         }
       ],
       "sizes": [
@@ -5989,31 +6074,35 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "AP01",
-          "color_name": "Ap01",
-          "display_name": "Ap01",
+          "color_name": "Apricot",
+          "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#F4C7A1"
         },
         {
           "supplier_color_code": "BU01",
-          "color_name": "Bu01",
-          "display_name": "Bu01",
+          "color_name": "Blue",
+          "display_name": "Blue",
           "internal_color_code": "BU01",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#2563EB"
         }
       ],
       "sizes": [
@@ -6261,14 +6350,16 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BLACK",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WHITE",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WHITE",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         }
       ],
       "sizes": [
@@ -6437,17 +6528,19 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         }
       ],
       "sizes": [
@@ -6643,38 +6736,43 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "BE01",
-          "color_name": "Be01",
-          "display_name": "Be01",
+          "color_name": "Navy Blue",
+          "display_name": "Navy Blue",
           "internal_color_code": "BE01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#1F2A44"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "RE01",
-          "color_name": "Re01",
-          "display_name": "Re01",
+          "color_name": "Rose Red",
+          "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#C2185B"
         }
       ],
       "sizes": [
@@ -7103,42 +7201,48 @@
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WHITE",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "LIGHT BLUE",
           "color_name": "Light Blue",
           "display_name": "Light Blue",
           "internal_color_code": "LIGHT_BLUE",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#87CEEB"
         },
         {
           "supplier_color_code": "PURPLE",
           "color_name": "Purple",
           "display_name": "Purple",
           "internal_color_code": "PURPLE",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#7E22CE"
         },
         {
           "supplier_color_code": "ROSE RED",
           "color_name": "Rose Red",
           "display_name": "Rose Red",
           "internal_color_code": "ROSE_RED",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#C2185B"
         },
         {
           "supplier_color_code": "DAISY",
           "color_name": "Daisy",
           "display_name": "Daisy",
           "internal_color_code": "DAISY",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#F4D03F"
         },
         {
           "supplier_color_code": "DARK GREY",
           "color_name": "Dark Grey",
           "display_name": "Dark Grey",
           "internal_color_code": "DARK_GREY",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#555555"
         }
       ],
       "sizes": [
@@ -7599,31 +7703,35 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "AP01",
-          "color_name": "Ap01",
-          "display_name": "Ap01",
+          "color_name": "Apricot",
+          "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#F4C7A1"
         },
         {
           "supplier_color_code": "CF01",
-          "color_name": "Cf01",
-          "display_name": "Cf01",
+          "color_name": "Coffee",
+          "display_name": "Coffee",
           "internal_color_code": "CF01",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#6F4E37"
         }
       ],
       "sizes": [
@@ -7994,28 +8102,32 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "AP01",
           "color_name": "Apricot",
           "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#F4C7A1"
         },
         {
           "supplier_color_code": "RE01",
           "color_name": "Rose Red",
           "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#C2185B"
         }
       ],
       "sizes": [
@@ -8268,35 +8380,40 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "GR02",
           "color_name": "Grey",
           "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "AP01",
           "color_name": "Apricot",
           "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#F4C7A1"
         },
         {
           "supplier_color_code": "RE01",
           "color_name": "Rose Red",
           "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#C2185B"
         }
       ],
       "sizes": [
@@ -8584,49 +8701,56 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BLACK",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WHITE",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WHITE",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "LIGHT GREY",
-          "color_name": "Grey",
-          "display_name": "Grey",
+          "color_name": "Light Grey",
+          "display_name": "Light Grey",
           "internal_color_code": "LIGHT_GREY",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#D1D5DB"
         },
         {
           "supplier_color_code": "LIGHT BLUE",
           "color_name": "Light Blue",
           "display_name": "Light Blue",
           "internal_color_code": "LIGHT_BLUE",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#87CEEB"
         },
         {
           "supplier_color_code": "LIGHT PINK",
           "color_name": "Light Pink",
           "display_name": "Light Pink",
           "internal_color_code": "LIGHT_PINK",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#F8BBD0"
         },
         {
           "supplier_color_code": "RED",
           "color_name": "Red",
           "display_name": "Red",
           "internal_color_code": "RED",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#DC2626"
         },
         {
           "supplier_color_code": "SAND",
           "color_name": "Sand",
           "display_name": "Sand",
           "internal_color_code": "SAND",
-          "sort_order": 7
+          "sort_order": 7,
+          "hex_color": "#D6C2A5"
         }
       ],
       "sizes": [
@@ -8910,84 +9034,96 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BLACK",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WHITE",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WHITE",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "AZALEA",
-          "color_name": "Magenta",
-          "display_name": "Magenta",
+          "color_name": "Azalea",
+          "display_name": "Azalea",
           "internal_color_code": "AZALEA",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#D94F8A"
         },
         {
           "supplier_color_code": "DAISY",
           "color_name": "Daisy",
           "display_name": "Daisy",
           "internal_color_code": "DAISY",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#F4D03F"
         },
         {
           "supplier_color_code": "LIGHT BLUE",
           "color_name": "Light Blue",
           "display_name": "Light Blue",
           "internal_color_code": "LIGHT_BLUE",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#87CEEB"
         },
         {
           "supplier_color_code": "LIGHT PINK",
           "color_name": "Light Pink",
           "display_name": "Light Pink",
           "internal_color_code": "LIGHT_PINK",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#F8BBD0"
         },
         {
           "supplier_color_code": "NAVY",
           "color_name": "Navy",
           "display_name": "Navy",
           "internal_color_code": "NAVY",
-          "sort_order": 7
+          "sort_order": 7,
+          "hex_color": "#1F2A44"
         },
         {
           "supplier_color_code": "ORANGE",
           "color_name": "Orange",
           "display_name": "Orange",
           "internal_color_code": "ORANGE",
-          "sort_order": 8
+          "sort_order": 8,
+          "hex_color": "#F97316"
         },
         {
           "supplier_color_code": "RED",
           "color_name": "Red",
           "display_name": "Red",
           "internal_color_code": "RED",
-          "sort_order": 9
+          "sort_order": 9,
+          "hex_color": "#DC2626"
         },
         {
           "supplier_color_code": "ROYAL BLUE",
-          "color_name": "Royal",
-          "display_name": "Royal",
+          "color_name": "Royal Blue",
+          "display_name": "Royal Blue",
           "internal_color_code": "ROYAL_BLUE",
-          "sort_order": 10
+          "sort_order": 10,
+          "hex_color": "#4169E1"
         },
         {
           "supplier_color_code": "SAND",
           "color_name": "Sand",
           "display_name": "Sand",
           "internal_color_code": "SAND",
-          "sort_order": 11
+          "sort_order": 11,
+          "hex_color": "#D6C2A5"
         },
         {
           "supplier_color_code": "SPORT GREY",
           "color_name": "Sport Grey",
           "display_name": "Sport Grey",
           "internal_color_code": "SPORT_GREY",
-          "sort_order": 12
+          "sort_order": 12,
+          "hex_color": "#B7B7B7"
         }
       ],
       "sizes": [
@@ -9520,14 +9656,16 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         }
       ],
       "sizes": [
@@ -9705,21 +9843,24 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "GR02",
           "color_name": "Grey",
           "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "PK01",
           "color_name": "Pink",
           "display_name": "Pink",
           "internal_color_code": "PK01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#EC4899"
         }
       ],
       "sizes": [
@@ -9929,45 +10070,51 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "GN01",
-          "color_name": "Gn01",
-          "display_name": "Gn01",
+          "color_name": "Green",
+          "display_name": "Green",
           "internal_color_code": "GN01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#2E7D32"
         },
         {
           "supplier_color_code": "VT01",
-          "color_name": "Vt01",
-          "display_name": "Vt01",
+          "color_name": "Purple",
+          "display_name": "Purple",
           "internal_color_code": "VT01",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#7E22CE"
         },
         {
           "supplier_color_code": "RE01",
-          "color_name": "Re01",
-          "display_name": "Re01",
+          "color_name": "Rose Red",
+          "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#C2185B"
         },
         {
           "supplier_color_code": "NG01",
-          "color_name": "Ng01",
-          "display_name": "Ng01",
+          "color_name": "Neon Green",
+          "display_name": "Neon Green",
           "internal_color_code": "NG01",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#39FF14"
         }
       ],
       "sizes": [
@@ -10332,38 +10479,43 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "AP01",
-          "color_name": "Ap01",
-          "display_name": "Ap01",
+          "color_name": "Apricot",
+          "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#F4C7A1"
         },
         {
           "supplier_color_code": "CF01",
-          "color_name": "Cf01",
-          "display_name": "Cf01",
+          "color_name": "Coffee",
+          "display_name": "Coffee",
           "internal_color_code": "CF01",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#6F4E37"
         },
         {
           "supplier_color_code": "RE01",
-          "color_name": "Re01",
-          "display_name": "Re01",
+          "color_name": "Rose Red",
+          "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#C2185B"
         }
       ],
       "sizes": [
@@ -10686,24 +10838,27 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#9CA3AF"
         }
       ],
       "sizes": [
@@ -10948,17 +11103,19 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         }
       ],
       "sizes": [
@@ -11128,10 +11285,11 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         }
       ],
       "sizes": [
@@ -11271,24 +11429,27 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#9CA3AF"
         }
       ],
       "sizes": [
@@ -11533,38 +11694,43 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "GREY",
-          "color_name": "浅灰 Grey",
-          "display_name": "浅灰 Grey",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GREY",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "NAVY",
-          "color_name": "海军蓝 Navy",
-          "display_name": "海军蓝 Navy",
+          "color_name": "Navy",
+          "display_name": "Navy",
           "internal_color_code": "NAVY",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#1F2A44"
         }
       ],
       "sizes": [
@@ -11898,45 +12064,51 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "AP01",
-          "color_name": "Ap01",
-          "display_name": "Ap01",
+          "color_name": "Apricot",
+          "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#F4C7A1"
         },
         {
           "supplier_color_code": "GN01",
-          "color_name": "Gn01",
-          "display_name": "Gn01",
+          "color_name": "Green",
+          "display_name": "Green",
           "internal_color_code": "GN01",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#2E7D32"
         },
         {
           "supplier_color_code": "RE01",
-          "color_name": "Re01",
-          "display_name": "Re01",
+          "color_name": "Rose Red",
+          "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#C2185B"
         }
       ],
       "sizes": [
@@ -12276,38 +12448,43 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "GR02",
-          "color_name": "Gr02",
-          "display_name": "Gr02",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GR02",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "VT01",
-          "color_name": "Vt01",
-          "display_name": "Vt01",
+          "color_name": "Purple",
+          "display_name": "Purple",
           "internal_color_code": "VT01",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#7E22CE"
         },
         {
           "supplier_color_code": "RE01",
-          "color_name": "Re01",
-          "display_name": "Re01",
+          "color_name": "Rose Red",
+          "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#C2185B"
         }
       ],
       "sizes": [
@@ -12590,98 +12767,112 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BLACK",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WHITE",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WHITE",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "CHARCOAL",
-          "color_name": "木炭色 Charcoal",
-          "display_name": "木炭色 Charcoal",
+          "color_name": "Charcoal",
+          "display_name": "Charcoal",
           "internal_color_code": "CHARCOAL",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#36454F"
         },
         {
           "supplier_color_code": "HELICONIA",
-          "color_name": "火鹤红 Heliconia",
-          "display_name": "火鹤红 Heliconia",
+          "color_name": "Heliconia",
+          "display_name": "Heliconia",
           "internal_color_code": "HELICONIA",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#E75480"
         },
         {
           "supplier_color_code": "IRTSH GREEN",
-          "color_name": "爱尔兰绿 Irish Green",
-          "display_name": "爱尔兰绿 Irish Green",
+          "color_name": "Irish Green",
+          "display_name": "Irish Green",
           "internal_color_code": "IRTSH_GREEN",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#009A44"
         },
         {
           "supplier_color_code": "LIGHT PINK",
-          "color_name": "浅粉色 Light Pink",
-          "display_name": "浅粉色 Light Pink",
+          "color_name": "Light Pink",
+          "display_name": "Light Pink",
           "internal_color_code": "LIGHT_PINK",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#F8BBD0"
         },
         {
           "supplier_color_code": "MAROON",
-          "color_name": "栗色 Maroon",
-          "display_name": "栗色 Maroon",
+          "color_name": "Maroon",
+          "display_name": "Maroon",
           "internal_color_code": "MAROON",
-          "sort_order": 7
+          "sort_order": 7,
+          "hex_color": "#7F1D1D"
         },
         {
           "supplier_color_code": "MILITARY GREEN",
-          "color_name": "军绿色 Military Green",
-          "display_name": "军绿色 Military Green",
+          "color_name": "Military Green",
+          "display_name": "Military Green",
           "internal_color_code": "MILITARY_GREEN",
-          "sort_order": 8
+          "sort_order": 8,
+          "hex_color": "#4B5320"
         },
         {
           "supplier_color_code": "NAVY",
-          "color_name": "海军蓝 Navy",
-          "display_name": "海军蓝 Navy",
+          "color_name": "Navy",
+          "display_name": "Navy",
           "internal_color_code": "NAVY",
-          "sort_order": 9
+          "sort_order": 9,
+          "hex_color": "#1F2A44"
         },
         {
           "supplier_color_code": "ORANGE",
-          "color_name": "橙色 Orange",
-          "display_name": "橙色 Orange",
+          "color_name": "Orange",
+          "display_name": "Orange",
           "internal_color_code": "ORANGE",
-          "sort_order": 10
+          "sort_order": 10,
+          "hex_color": "#F97316"
         },
         {
           "supplier_color_code": "RED",
-          "color_name": "红色 Red",
-          "display_name": "红色 Red",
+          "color_name": "Red",
+          "display_name": "Red",
           "internal_color_code": "RED",
-          "sort_order": 11
+          "sort_order": 11,
+          "hex_color": "#DC2626"
         },
         {
           "supplier_color_code": "ROYAL BLUE",
-          "color_name": "皇家蓝 Royal",
-          "display_name": "皇家蓝 Royal",
+          "color_name": "Royal Blue",
+          "display_name": "Royal Blue",
           "internal_color_code": "ROYAL_BLUE",
-          "sort_order": 12
+          "sort_order": 12,
+          "hex_color": "#4169E1"
         },
         {
           "supplier_color_code": "SAND",
-          "color_name": "沙色 Sand",
-          "display_name": "沙色 Sand",
+          "color_name": "Sand",
+          "display_name": "Sand",
           "internal_color_code": "SAND",
-          "sort_order": 13
+          "sort_order": 13,
+          "hex_color": "#D6C2A5"
         },
         {
           "supplier_color_code": "SPORT GREY",
-          "color_name": "运动灰 Sport Grey",
-          "display_name": "运动灰 Sport Grey",
+          "color_name": "Sport Grey",
+          "display_name": "Sport Grey",
           "internal_color_code": "SPORT_GREY",
-          "sort_order": 14
+          "sort_order": 14,
+          "hex_color": "#B7B7B7"
         }
       ],
       "sizes": [
@@ -13436,84 +13627,96 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BLACK",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WHITE",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WHITE",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "CHARCOAL",
-          "color_name": "木炭色 Charcoal",
-          "display_name": "木炭色 Charcoal",
+          "color_name": "Charcoal",
+          "display_name": "Charcoal",
           "internal_color_code": "CHARCOAL",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#36454F"
         },
         {
           "supplier_color_code": "LIGHT PINK",
-          "color_name": "浅粉色 Light Pink",
-          "display_name": "浅粉色 Light Pink",
+          "color_name": "Light Pink",
+          "display_name": "Light Pink",
           "internal_color_code": "LIGHT_PINK",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#F8BBD0"
         },
         {
           "supplier_color_code": "MAROON",
-          "color_name": "栗色 Maroon",
-          "display_name": "栗色 Maroon",
+          "color_name": "Maroon",
+          "display_name": "Maroon",
           "internal_color_code": "MAROON",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#7F1D1D"
         },
         {
           "supplier_color_code": "MILITARY GREEN",
-          "color_name": "军绿色 Military Green",
-          "display_name": "军绿色 Military Green",
+          "color_name": "Military Green",
+          "display_name": "Military Green",
           "internal_color_code": "MILITARY_GREEN",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#4B5320"
         },
         {
           "supplier_color_code": "NAVY",
-          "color_name": "海军蓝 Navy",
-          "display_name": "海军蓝 Navy",
+          "color_name": "Navy",
+          "display_name": "Navy",
           "internal_color_code": "NAVY",
-          "sort_order": 7
+          "sort_order": 7,
+          "hex_color": "#1F2A44"
         },
         {
           "supplier_color_code": "ORANGE",
-          "color_name": "橙色 Orange",
-          "display_name": "橙色 Orange",
+          "color_name": "Orange",
+          "display_name": "Orange",
           "internal_color_code": "ORANGE",
-          "sort_order": 8
+          "sort_order": 8,
+          "hex_color": "#F97316"
         },
         {
           "supplier_color_code": "RED",
-          "color_name": "红色 Red",
-          "display_name": "红色 Red",
+          "color_name": "Red",
+          "display_name": "Red",
           "internal_color_code": "RED",
-          "sort_order": 9
+          "sort_order": 9,
+          "hex_color": "#DC2626"
         },
         {
           "supplier_color_code": "ROYAL",
-          "color_name": "皇家蓝 Royal",
-          "display_name": "皇家蓝 Royal",
+          "color_name": "Royal Blue",
+          "display_name": "Royal Blue",
           "internal_color_code": "ROYAL",
-          "sort_order": 10
+          "sort_order": 10,
+          "hex_color": "#4169E1"
         },
         {
           "supplier_color_code": "SAND",
-          "color_name": "沙色 Sand",
-          "display_name": "沙色 Sand",
+          "color_name": "Sand",
+          "display_name": "Sand",
           "internal_color_code": "SAND",
-          "sort_order": 11
+          "sort_order": 11,
+          "hex_color": "#D6C2A5"
         },
         {
           "supplier_color_code": "SPORT GREY",
-          "color_name": "运动灰 Sport Grey",
-          "display_name": "运动灰 Sport Grey",
+          "color_name": "Sport Grey",
+          "display_name": "Sport Grey",
           "internal_color_code": "SPORT_GREY",
-          "sort_order": 12
+          "sort_order": 12,
+          "hex_color": "#B7B7B7"
         }
       ],
       "sizes": [
@@ -14181,52 +14384,59 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WH01",
-          "color_name": "Wh01",
-          "display_name": "Wh01",
+          "color_name": "White",
+          "display_name": "White",
           "internal_color_code": "WH01",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "AP01",
-          "color_name": "Ap01",
-          "display_name": "Ap01",
+          "color_name": "Apricot",
+          "display_name": "Apricot",
           "internal_color_code": "AP01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#F4C7A1"
         },
         {
           "supplier_color_code": "NAVY",
-          "color_name": "海军蓝 Navy",
-          "display_name": "海军蓝 Navy",
+          "color_name": "Navy",
+          "display_name": "Navy",
           "internal_color_code": "NAVY",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#1F2A44"
         },
         {
           "supplier_color_code": "RED",
-          "color_name": "红色 Red",
-          "display_name": "红色 Red",
+          "color_name": "Red",
+          "display_name": "Red",
           "internal_color_code": "RED",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#DC2626"
         },
         {
           "supplier_color_code": "ATHLETIC HEATHER",
           "color_name": "Athletic Heather",
           "display_name": "Athletic Heather",
           "internal_color_code": "ATHLETIC_HEATHER",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#B2B4B6"
         },
         {
           "supplier_color_code": "DARK GREY HEATHER",
-          "color_name": "深灰色 Dark Grey Heather",
-          "display_name": "深灰色 Dark Grey Heather",
+          "color_name": "Dark Grey Heather",
+          "display_name": "Dark Grey Heather",
           "internal_color_code": "DARK_GREY_HEATHER",
-          "sort_order": 7
+          "sort_order": 7,
+          "hex_color": "#3F444A"
         }
       ],
       "sizes": [
@@ -14710,35 +14920,40 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BLACK",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WHITE",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WHITE",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "GREY",
-          "color_name": "浅灰 Grey",
-          "display_name": "浅灰 Grey",
+          "color_name": "Grey",
+          "display_name": "Grey",
           "internal_color_code": "GREY",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#9CA3AF"
         },
         {
           "supplier_color_code": "RED",
-          "color_name": "红色 Red",
-          "display_name": "红色 Red",
+          "color_name": "Red",
+          "display_name": "Red",
           "internal_color_code": "RED",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#DC2626"
         },
         {
           "supplier_color_code": "SAND",
-          "color_name": "沙色 Sand",
-          "display_name": "沙色 Sand",
+          "color_name": "Sand",
+          "display_name": "Sand",
           "internal_color_code": "SAND",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#D6C2A5"
         }
       ],
       "sizes": [
@@ -15067,45 +15282,51 @@
       "colors": [
         {
           "supplier_color_code": "BL01",
-          "color_name": "Bl01",
-          "display_name": "Bl01",
+          "color_name": "Black",
+          "display_name": "Black",
           "internal_color_code": "BL01",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "GR03",
-          "color_name": "Gr03",
-          "display_name": "Gr03",
+          "color_name": "Washed Grey",
+          "display_name": "Washed Grey",
           "internal_color_code": "GR03",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#777777"
         },
         {
           "supplier_color_code": "CF01",
-          "color_name": "Cf01",
-          "display_name": "Cf01",
+          "color_name": "Coffee",
+          "display_name": "Coffee",
           "internal_color_code": "CF01",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#6F4E37"
         },
         {
           "supplier_color_code": "GN01",
-          "color_name": "Gn01",
-          "display_name": "Gn01",
+          "color_name": "Green",
+          "display_name": "Green",
           "internal_color_code": "GN01",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#2E7D32"
         },
         {
           "supplier_color_code": "VT01",
-          "color_name": "Vt01",
-          "display_name": "Vt01",
+          "color_name": "Purple",
+          "display_name": "Purple",
           "internal_color_code": "VT01",
-          "sort_order": 5
+          "sort_order": 5,
+          "hex_color": "#7E22CE"
         },
         {
           "supplier_color_code": "RE01",
-          "color_name": "Re01",
-          "display_name": "Re01",
+          "color_name": "Rose Red",
+          "display_name": "Rose Red",
           "internal_color_code": "RE01",
-          "sort_order": 6
+          "sort_order": 6,
+          "hex_color": "#C2185B"
         }
       ],
       "sizes": [
@@ -15423,14 +15644,16 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BLACK",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "APRICOT",
           "color_name": "Apricot",
           "display_name": "Apricot",
           "internal_color_code": "APRICOT",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#F4C7A1"
         }
       ],
       "sizes": [
@@ -15570,28 +15793,32 @@
           "color_name": "Black",
           "display_name": "Black",
           "internal_color_code": "BLACK",
-          "sort_order": 1
+          "sort_order": 1,
+          "hex_color": "#111111"
         },
         {
           "supplier_color_code": "WHITE",
           "color_name": "White",
           "display_name": "White",
           "internal_color_code": "WHITE",
-          "sort_order": 2
+          "sort_order": 2,
+          "hex_color": "#FFFFFF"
         },
         {
           "supplier_color_code": "NAVY",
           "color_name": "Navy",
           "display_name": "Navy",
           "internal_color_code": "NAVY",
-          "sort_order": 3
+          "sort_order": 3,
+          "hex_color": "#1F2A44"
         },
         {
           "supplier_color_code": "RED",
           "color_name": "Red",
           "display_name": "Red",
           "internal_color_code": "RED",
-          "sort_order": 4
+          "sort_order": 4,
+          "hex_color": "#DC2626"
         }
       ],
       "sizes": [
@@ -15664,6 +15891,7 @@
     "size_count": 216,
     "sku_count": 1367,
     "image_count": 37,
-    "decoration_count": 114
+    "decoration_count": 114,
+    "web_swatch_note": "Hex values are standardized UI approximations; source workbooks did not provide Pantone/RGB values."
   }
 }

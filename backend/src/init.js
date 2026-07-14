@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { pool, query } from './db.js';
-import { seedCatalogIfSafe } from './catalog.js';
+import { seedCatalogIfSafe, syncCatalogColors } from './catalog.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCHEMA_PATH = process.env.SCHEMA_PATH || join(__dirname, '..', '..', 'blanktex_schema.sql');
@@ -43,6 +43,8 @@ async function init() {
   await migrate();
   const catalogResult = await seedCatalogIfSafe();
   console.log('Catalog init:', catalogResult);
+  const colorResult = await syncCatalogColors();
+  console.log('Catalog color swatches:', colorResult);
 }
 
 // Idempotent, additive migrations for DBs created before a feature was added.

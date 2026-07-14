@@ -84,7 +84,9 @@ router.get('/:id', wrap(async (req, res) => {
   const [colors, sizes, imgs] = await Promise.all([
     query('SELECT * FROM style_colors WHERE style_id = $1 ORDER BY sort_order, color_name', [req.params.id]),
     query(
-      `SELECT ss.*, sp.chest_width, sp.body_length, sp.sleeve_length, sp.shoulder_width,
+      `SELECT ss.*, sp.chest_width, sp.chest_circumference, sp.waist_circumference,
+              sp.hip_circumference, sp.body_length, sp.pants_length, sp.inseam_length,
+              sp.sleeve_length, sp.shoulder_width, sp.measurement_unit,
               sp.print_area_width, sp.print_area_height, sp.max_print_width, sp.max_print_height,
               (SELECT COUNT(*)::int FROM style_color_sizes sc WHERE sc.style_size_id = ss.style_size_id) AS sku_count
          FROM style_sizes ss

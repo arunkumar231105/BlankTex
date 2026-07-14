@@ -10,9 +10,13 @@ function Info({ k, v }) {
 export default function StylePreview({ detail, loading }) {
   const navigate = useNavigate();
   const [activeImg, setActiveImg] = useState(0);
+  const [activeColorId, setActiveColorId] = useState(null);
 
-  // Reset the selected image whenever the style changes
-  useEffect(() => { setActiveImg(0); }, [detail?.style_id]);
+  // Reset image/color selections whenever the style changes.
+  useEffect(() => {
+    setActiveImg(0);
+    setActiveColorId(detail?.colors?.[0]?.style_color_id || null);
+  }, [detail?.style_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading && !detail) return <div className="card"><div className="loading">Loading style…</div></div>;
   if (!detail) return <div className="card"><div className="empty"><div className="big">👕</div>Select a style from the list to preview it.</div></div>;
@@ -22,6 +26,7 @@ export default function StylePreview({ detail, loading }) {
   const active = s.active && !s.discontinued;
   const images = s.images || [];
   const hero = images[activeImg] || images[0];
+  const selectedColor = s.colors.find((color) => color.style_color_id === activeColorId) || s.colors[0];
 
   return (
     <div>
@@ -51,12 +56,19 @@ export default function StylePreview({ detail, loading }) {
           </div>
 
           <div className="pv-block">
-            <div className="pv-hero">
+            <div className="pv-hero" style={{ '--selected-color': selectedColor?.hex_color || '#d7dce5' }}>
               {s.brand_logo && <img className="brand-badge" src={s.brand_logo} alt="" onError={(e) => { e.target.style.display = 'none'; }} />}
               {hero
                 ? <img className="pv-hero-img" src={hero.image_url} alt={hero.alt_text || s.style_name}
                     onError={(e) => { e.target.style.display = 'none'; }} />
                 : emoji}
+              {selectedColor && (
+                <div className="pv-selected-color">
+                  <span style={{ background: selectedColor.hex_color }} />
+                  {selectedColor.display_name}
+                  <small>{selectedColor.supplier_color_code}</small>
+                </div>
+              )}
             </div>
             {images.length > 0 && (
               <div className="pv-thumbs">
@@ -96,10 +108,14 @@ export default function StylePreview({ detail, loading }) {
             ? (
               <div className="pv-colors">
                 {s.colors.map((c) => (
-                  <div className="pv-sw" key={c.style_color_id}>
-                    <div className="chip" style={{ background: c.hex_color || '#ccc' }} title={c.display_name} />
+                  <button type="button" className={`pv-sw${c.style_color_id === selectedColor?.style_color_id ? ' active' : ''}`}
+                    key={c.style_color_id} onClick={() => setActiveColorId(c.style_color_id)}
+                    aria-pressed={c.style_color_id === selectedColor?.style_color_id}
+                    title={`${c.display_name} (${c.supplier_color_code})`}>
+                    <span className="chip" style={{ background: c.hex_color || '#ccc' }} />
                     <div className="cn">{c.display_name}</div>
-                  </div>
+                    <div className="cc">{c.supplier_color_code}</div>
+                  </button>
                 ))}
               </div>
             )
@@ -112,13 +128,13 @@ export default function StylePreview({ detail, loading }) {
             ? (
               <div className="tbl-wrap">
                 <table className="tbl">
-                  <thead><tr><th>Size</th><th>Chest (in)</th><th>Length (in)</th><th>SKUs</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Size</th><th>Chest (cm)</th><th>Length (cm)</th><th>SKUs</th><th>Status</th></tr></thead>
                   <tbody>
                     {s.sizes.map((z) => (
                       <tr key={z.style_size_id}>
                         <td style={{ fontWeight: 600 }}>{z.size_code}</td>
-                        <td>{z.chest_width ?? '—'}</td>
-                        <td>{z.body_length ?? '—'}</td>
+                        <td>{z.chest_circumference ?? z.chest_width ?? '—'}</td>
+                        <td>{z.body_length ?? z.pants_length ?? '—'}</td>
                         <td>{z.sku_count}</td>
                         <td><span className={`badge ${z.active ? 'green' : 'grey'}`}>{z.active ? 'Active' : 'Inactive'}</span></td>
                       </tr>

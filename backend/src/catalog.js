@@ -51,10 +51,10 @@ async function loadCatalog(client) {
     for (const color of style.colors) {
       const c = await insertOne(client,
         `INSERT INTO style_colors (style_id, supplier_color_code, color_name,
-           internal_color_code, display_name, sort_order, active, discontinued)
-         VALUES ($1,$2,$3,$4,$5,$6,TRUE,FALSE) RETURNING style_color_id`,
+           internal_color_code, display_name, hex_color, sort_order, active, discontinued)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE,FALSE) RETURNING style_color_id`,
         [styleId, color.supplier_color_code, color.color_name,
-         color.internal_color_code, color.display_name, color.sort_order]);
+         color.internal_color_code, color.display_name, color.hex_color, color.sort_order]);
       colorIds.set(color.supplier_color_code, c.style_color_id);
     }
 
@@ -135,6 +135,37 @@ export async function seedCatalogIfSafe({ forceReplace = false } = {}) {
   } finally {
     client.release();
   }
+}
+
+// Non-destructive correction for deployments that already imported the catalog
+// before display swatches were added. Only catalog-matched brand/style/color rows
+// are touched; user-created colors remain unchanged.
+export async function syncCatalogColors() {
+  const values = [];
+  const params = [];
+  for (const style of catalog.styles) {
+    for (const color of style.colors) {
+      const base = params.length;
+      values.push(`($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5})`);
+      params.push(style.brand_code, style.style_no, color.supplier_color_code,
+        color.display_name, color.hex_color);
+    }
+  }
+  const result = await pool.query(
+    `UPDATE style_colors sc
+        SET color_name = v.display_name,
+            display_name = v.display_name,
+            hex_color = v.hex_color
+       FROM styles s, brands b,
+            (VALUES ${values.join(',')}) AS v(brand_code, style_no, supplier_color_code, display_name, hex_color)
+      WHERE sc.style_id = s.style_id
+        AND s.brand_id = b.brand_id
+        AND b.brand_code = v.brand_code
+        AND s.style_no = v.style_no
+        AND sc.supplier_color_code = v.supplier_color_code`,
+    params,
+  );
+  return { updated: result.rowCount };
 }
 
 async function runCli() {
