@@ -16,6 +16,7 @@ import skus from './routes/skus.js';
 import prices from './routes/prices.js';
 import images from './routes/images.js';
 import imports from './routes/imports.js';
+import decorations from './routes/decorations.js';
 
 const app = express();
 app.use(cors());
@@ -43,6 +44,7 @@ app.use('/api/skus', skus);
 app.use('/api/prices', prices);
 app.use('/api/images', images);
 app.use('/api/import', imports);
+app.use('/api/decorations', decorations);
 
 // 404
 app.use((req, res) => res.status(404).json({ error: `Not found: ${req.method} ${req.url}` }));

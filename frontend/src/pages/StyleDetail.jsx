@@ -6,8 +6,9 @@ import ColorsTab from './style/ColorsTab.jsx';
 import SizesTab from './style/SizesTab.jsx';
 import SkusTab from './style/SkusTab.jsx';
 import ImagesTab from './style/ImagesTab.jsx';
+import DecorationsTab from './style/DecorationsTab.jsx';
 
-const TABS = ['Overview', 'Images', 'Colors', 'Sizes', 'SKUs'];
+const TABS = ['Overview', 'Images', 'Colors', 'Sizes', 'Decorations', 'SKUs'];
 
 function Info({ k, v }) {
   return <div className="info-row"><span className="k">{k}</span><span className="v">{v ?? '—'}</span></div>;
@@ -31,7 +32,7 @@ export default function StyleDetail() {
           <div className="page-desc"><Link to="/styles" style={{ color: 'var(--primary)' }}>← Styles</Link></div>
           <div className="page-title">{style.style_no} — {style.style_name}</div>
           <div className="page-desc">
-            {style.brand_name} · {style.garment_category} · {style.gender} · <Badge value={style.product_status} />
+            {[style.brand_name, style.garment_category, style.gender].filter(Boolean).join(' · ')} · <Badge value={style.product_status} />
           </div>
         </div>
       </div>
@@ -60,7 +61,7 @@ export default function StyleDetail() {
               <Info k="Neck" v={style.neck_type} />
               <Info k="Fabric" v={style.fabric_composition} />
               <Info k="Fabric Type" v={style.fabric_type} />
-              <Info k="Weight" v={style.fabric_weight_oz ? `${style.fabric_weight_oz} oz / ${style.fabric_weight_gsm ?? '—'} gsm` : null} />
+              <Info k="Fabric Weight" v={style.fabric_weight_gsm != null ? `${style.fabric_weight_gsm} gsm` : (style.fabric_weight_oz != null ? `${style.fabric_weight_oz} oz` : null)} />
               <Info k="Preferred Supplier" v={style.supplier_name} />
               <Info k="Featured" v={style.is_featured ? 'Yes' : 'No'} />
               <Info k="Colors / Sizes" v={`${style.colors.length} colors · ${style.sizes.length} sizes`} />
@@ -73,6 +74,7 @@ export default function StyleDetail() {
       {tab === 'Images' && <ImagesTab styleId={id} />}
       {tab === 'Colors' && <ColorsTab styleId={id} />}
       {tab === 'Sizes' && <SizesTab styleId={id} />}
+      {tab === 'Decorations' && <DecorationsTab styleId={id} />}
       {tab === 'SKUs' && <SkusTab styleId={id} />}
     </>
   );

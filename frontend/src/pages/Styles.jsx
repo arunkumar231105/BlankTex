@@ -11,10 +11,9 @@ const CATALOG_IMPORT = {
   columns: ['brand_code', 'brand_name', 'style_no', 'style_name', 'garment_category', 'gender',
     'color_name', 'supplier_color_code', 'hex_color', 'size_code', 'sku_code', 'supplier_sku',
     'barcode', 'supplier_code', 'cost_price'],
-  sample: 'brand_code,brand_name,style_no,style_name,garment_category,gender,color_name,supplier_color_code,hex_color,size_code,sku_code,supplier_sku,barcode,supplier_code,cost_price\n'
-    + 'GIL,Gildan,5000,Heavy Cotton Tee,T-Shirt,Unisex,Black,BLK,#111111,M,G5000-BLK-M,5000BLKM,00821780001,SSA,2.65\n'
-    + 'GIL,Gildan,5000,Heavy Cotton Tee,T-Shirt,Unisex,Black,BLK,#111111,L,G5000-BLK-L,5000BLKL,00821780002,SSA,2.65\n'
-    + 'GIL,Gildan,5000,Heavy Cotton Tee,T-Shirt,Unisex,White,WHT,#FFFFFF,M,G5000-WHT-M,5000WHTM,00821780003,SSA,2.55\n',
+  sample: 'brand_code,brand_name,style_no,style_name,garment_category,gender,color_name,supplier_color_code,size_code,sku_code,supplier_sku\n'
+    + 'DIGI,DIGI,DG001,180G Adult 100% Cotton T-Shirt,T-Shirt,Unisex,Black,BL01,S,DG001-BL01-S,DG001-BL01-S\n'
+    + 'DIGI,DIGI,DG001,180G Adult 100% Cotton T-Shirt,T-Shirt,Unisex,White,WH01,S,DG001-WH01-S,DG001-WH01-S\n',
 };
 import {
   GARMENT_CATEGORY, GENDER, FIT_TYPE, SLEEVE_TYPE, NECK_TYPE, FABRIC_TYPE, PRODUCT_STATUS,
@@ -72,7 +71,8 @@ export default function Styles() {
     { name: 'short_name', label: 'Short Name', placeholder: 'e.g. G5000' },
     { name: 'garment_category', label: 'Category', type: 'select', options: GARMENT_CATEGORY, required: true },
     { name: 'garment_type', label: 'Garment Type', required: true, placeholder: 'Crew Neck, Pullover…' },
-    { name: 'gender', label: 'Gender', type: 'select', options: GENDER, required: true, default: 'Unisex' },
+    { name: 'gender', label: 'Gender', type: 'select', options: GENDER,
+      hint: 'Leave blank when the source catalog does not specify a gender.' },
     { name: 'fit_type', label: 'Fit', type: 'select', options: FIT_TYPE },
     { name: 'sleeve_type', label: 'Sleeve', type: 'select', options: SLEEVE_TYPE },
     { name: 'neck_type', label: 'Neck', type: 'select', options: NECK_TYPE },
@@ -108,7 +108,7 @@ export default function Styles() {
           entity: 'styles',
           title: 'Styles',
           columns: ['brand_code', 'style_no', 'style_name', 'short_name', 'garment_category', 'garment_type', 'gender', 'fit_type', 'sleeve_type', 'neck_type', 'fabric_composition', 'fabric_weight_gsm', 'fabric_weight_oz', 'fabric_type'],
-          sample: 'brand_code,style_no,style_name,garment_category,garment_type,gender,fabric_composition,fabric_weight_gsm\nGIL,5000,Heavy Cotton Tee,T-Shirt,Crew Neck,Unisex,100% Cotton,180\nBEL,3001,Unisex Jersey Tee,T-Shirt,Crew Neck,Unisex,100% Cotton,142\n',
+          sample: 'brand_code,style_no,style_name,garment_category,garment_type,gender,fabric_composition,fabric_weight_gsm\nDIGI,DG001,180G Adult 100% Cotton T-Shirt,T-Shirt,T-Shirt,Unisex,100% Cotton,180\nGILDAN,C1717,Gildan Heavyweight T-Shirt,T-Shirt,T-Shirt,Unisex,100% Cotton,207\n',
         }}
       />
 

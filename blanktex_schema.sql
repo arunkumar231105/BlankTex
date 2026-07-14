@@ -209,7 +209,7 @@ CREATE TABLE styles (
     short_name           VARCHAR(100),
     garment_category     VARCHAR(50)   NOT NULL,
     garment_type         VARCHAR(50)   NOT NULL,
-    gender               VARCHAR(30)   NOT NULL
+    gender               VARCHAR(30)
         CHECK (gender IN ('Men','Women','Youth','Toddler','Infant','Unisex')),
     fit_type             VARCHAR(30),
     sleeve_type          VARCHAR(30),
@@ -340,6 +340,16 @@ CREATE TABLE style_size_specs (
     body_length            DECIMAL(6,2),
     sleeve_length          DECIMAL(6,2),
     shoulder_width         DECIMAL(6,2),
+    chest_circumference    DECIMAL(6,2),
+    waist_circumference    DECIMAL(6,2),
+    hip_circumference      DECIMAL(6,2),
+    pants_length           DECIMAL(6,2),
+    inseam_length          DECIMAL(6,2),
+    hem_circumference      DECIMAL(6,2),
+    head_circumference     VARCHAR(30),
+    visor_length           DECIMAL(6,2),
+    crown_depth            DECIMAL(6,2),
+    measurement_unit       VARCHAR(10) DEFAULT 'cm',
     garment_weight_g       DECIMAL(6,2),
     print_area_width       DECIMAL(6,2),
     print_area_height      DECIMAL(6,2),
@@ -360,6 +370,27 @@ CREATE TABLE style_size_specs (
 
 CREATE TRIGGER trg_specs_updated
     BEFORE UPDATE ON style_size_specs
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+
+-- =============================================================================
+-- 2.4c style_decorations (catalog-authorized process/color/size combinations)
+-- =============================================================================
+CREATE TABLE style_decorations (
+    style_decoration_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    style_id            UUID NOT NULL REFERENCES styles (style_id) ON DELETE CASCADE,
+    process_type        VARCHAR(30) NOT NULL,
+    supplier_color_code VARCHAR(50),
+    size_range          VARCHAR(50),
+    notes               TEXT,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX ix_style_decorations_style ON style_decorations (style_id);
+CREATE UNIQUE INDEX uq_style_decoration_values ON style_decorations
+  (style_id, process_type, COALESCE(supplier_color_code, ''), COALESCE(size_range, ''));
+CREATE TRIGGER trg_style_decorations_updated
+    BEFORE UPDATE ON style_decorations
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 
@@ -495,6 +526,13 @@ CREATE TRIGGER trg_manufacturers_updated
 ALTER TABLE brands ADD COLUMN manufacturer_id UUID
     REFERENCES manufacturers (manufacturer_id) ON DELETE SET NULL;
 CREATE INDEX ix_brands_manufacturer ON brands (manufacturer_id);
+
+CREATE TABLE catalog_meta (
+    catalog_key VARCHAR(50) PRIMARY KEY,
+    catalog_version VARCHAR(30) NOT NULL,
+    source_description TEXT,
+    imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 -- =============================================================================
 -- End of BlankTex Module V1 schema

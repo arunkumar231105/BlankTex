@@ -51,4 +51,5 @@ export const api = {
   saveSpec: (id, body) => request(`/specs/by-size/${id}`, { method: 'PUT', body }),
   pricesBySku: (id) => request(`/prices/by-sku/${id}`),
   imagesByStyle: (id) => request(`/images/by-style/${id}`),
+  decorationsByStyle: (id) => request(`/decorations/by-style/${id}`),
 };

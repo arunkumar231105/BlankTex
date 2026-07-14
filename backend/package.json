@@ -9,7 +9,7 @@
     "dev": "node --watch src/server.js",
     "db:setup": "node src/setup.js",
     "db:init": "node src/init.js",
-    "db:demo": "node src/demo.js"
+    "db:catalog": "node src/catalog.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

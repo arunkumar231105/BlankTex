@@ -43,7 +43,7 @@ export default function Brands() {
           entity: 'brands',
           title: 'Brands',
           columns: ['brand_code', 'brand_name', 'brand_owner', 'brand_logo', 'website', 'country_of_origin', 'default_size_system', 'default_currency', 'status'],
-          sample: 'brand_code,brand_name,brand_owner,default_size_system,status\nGIL,Gildan,Gildan Activewear,Adult,Active\nBEL,Bella Canvas,Bella+Canvas LLC,Adult,Active\n',
+          sample: 'brand_code,brand_name,default_size_system,status\nDIGI,DIGI,Adult,Active\nGILDAN,Gildan,Adult,Active\n',
         }}
       />
     </>

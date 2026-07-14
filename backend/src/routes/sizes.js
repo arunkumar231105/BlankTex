@@ -15,7 +15,10 @@ const router = crudRouter({
 // Sizes (with specs) for a given style
 router.get('/by-style/:styleId', wrap(async (req, res) => {
   const { rows } = await query(
-    `SELECT ss.*, sp.chest_width, sp.body_length, sp.sleeve_length, sp.shoulder_width
+    `SELECT ss.*, sp.chest_width, sp.chest_circumference, sp.waist_circumference,
+            sp.hip_circumference, sp.body_length, sp.pants_length, sp.inseam_length,
+            sp.sleeve_length, sp.shoulder_width, sp.head_circumference,
+            sp.visor_length, sp.crown_depth, sp.garment_weight_g, sp.measurement_unit
        FROM style_sizes ss
        LEFT JOIN style_size_specs sp ON sp.style_size_id = ss.style_size_id
       WHERE ss.style_id = $1

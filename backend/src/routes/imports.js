@@ -97,7 +97,6 @@ router.post('/styles', wrap(async (req, res) => {
       o.brand_id = brandId;
       o.garment_category = o.garment_category || 'T-Shirt';
       o.garment_type = o.garment_type || 'Standard';
-      o.gender = o.gender || 'Unisex';
       await upsert('styles', ['brand_id', 'style_no'], o);
       inserted++;
     } catch (e) { errors.push({ row: n + 2, message: e.message }); }
@@ -139,7 +138,7 @@ async function foStyle(r, brandId, ctx) {
          fit_type, sleeve_type, neck_type, fabric_composition, fabric_weight_gsm, fabric_weight_oz, fabric_type)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING style_id`,
       [brandId, r.style_no, r.style_name || r.style_no, r.short_name,
-       r.garment_category || 'T-Shirt', r.garment_type || 'Standard', r.gender || 'Unisex',
+       r.garment_category || 'T-Shirt', r.garment_type || 'Standard', r.gender || null,
        r.fit_type, r.sleeve_type, r.neck_type, r.fabric_composition, r.fabric_weight_gsm,
        r.fabric_weight_oz, r.fabric_type],
     )).rows[0];

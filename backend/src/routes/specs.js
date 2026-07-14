@@ -6,6 +6,9 @@ const router = Router();
 
 const COLS = [
   'chest_width', 'body_length', 'sleeve_length', 'shoulder_width', 'garment_weight_g',
+  'chest_circumference', 'waist_circumference', 'hip_circumference', 'pants_length',
+  'inseam_length', 'hem_circumference', 'head_circumference', 'visor_length',
+  'crown_depth', 'measurement_unit',
   'print_area_width', 'print_area_height', 'max_print_width', 'max_print_height',
   'front_print_top_margin', 'back_print_top_margin', 'is_available', 'is_discontinued', 'notes',
 ];
