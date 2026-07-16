@@ -7,11 +7,12 @@ function qs(params = {}) {
 }
 
 async function request(path, options = {}) {
+  const isForm = options.body instanceof FormData;
   const res = await fetch(BASE + path, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: isForm ? undefined : { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
     ...options,
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: options.body ? (isForm ? options.body : JSON.stringify(options.body)) : undefined,
   });
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
@@ -27,6 +28,7 @@ async function request(path, options = {}) {
 
 export const api = {
   login: (email, password) => request('/auth/login', { method: 'POST', body: { email, password } }),
+  sso: () => request('/auth/sso', { method: 'POST' }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   authMe: () => request('/auth/me'),
 
@@ -60,4 +62,17 @@ export const api = {
   pricesBySku: (id) => request(`/prices/by-sku/${id}`),
   imagesByStyle: (id) => request(`/images/by-style/${id}`),
   decorationsByStyle: (id) => request(`/decorations/by-style/${id}`),
+  purchaseCatalog: () => request('/purchases/catalog'),
+  createPurchase: (body) => request('/purchases', { method: 'POST', body }),
+  uploadPurchaseImage: (body) => request('/purchases/upload', { method: 'POST', body }),
+  purchases: (params) => request(`/purchases${qs(params)}`),
+  purchase: (orderNo) => request(`/purchases/${encodeURIComponent(orderNo)}`),
+  syncPurchases: (orderNos) => request('/purchases/sync', { method: 'POST', body: { order_nos: orderNos || [] } }),
+  importPurchase: (orderNo) => request('/purchases/import', { method: 'POST', body: { order_no: orderNo } }),
+  purchaseDelivery: (orderNo) => request(`/purchases/${encodeURIComponent(orderNo)}/delivery`),
+  closePurchase: (orderNo) => request(`/purchases/${encodeURIComponent(orderNo)}/close`, { method: 'POST' }),
+  savePurchaseNotes: (orderNo, notes) => request(`/purchases/${encodeURIComponent(orderNo)}/notes`, { method: 'PUT', body: { notes } }),
+  updatePurchaseShipping: (orderNo, body) => request(`/purchases/${encodeURIComponent(orderNo)}/shipping`, { method: 'PUT', body }),
+  purchaseIntegration: () => request('/purchases/integration'),
+  testPurchaseIntegration: () => request('/purchases/integration/test', { method: 'POST' }),
 };

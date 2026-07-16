@@ -53,7 +53,7 @@ export default function Dashboard() {
       <div className="dash-actions">
         <button className="btn" onClick={() => navigate('/styles')}>＋ Add New Style</button>
         <button className="btn primary" onClick={() => navigate('/styles')}>Manage Catalog</button>
-        <button className="btn" type="button" title="Purchase Order — coming soon">Purchase Order</button>
+        <button className="btn" type="button" onClick={() => navigate('/orders')}>Purchase Orders</button>
       </div>
 
       <div className="dash-grid">

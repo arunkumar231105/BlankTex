@@ -32,6 +32,12 @@ services:
       SCHEMA_PATH: /app/blanktex_schema.sql
       ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      SSO_SHARED_SECRET: 2f9dfffba53a1a44607b3091b81255df2c80773a264de3743cdf6405533c1cdf
+      UPLOAD_DIR: /app/uploads
+      SUPPLIER_CONFIG_PATH: /run/secrets/blanktex-supplier.json
+    volumes:
+      - purchase_uploads:/app/uploads
+      - /root/.blanktex_supplier_config.json:/run/secrets/blanktex-supplier.json:ro
     depends_on:
       db:
         condition: service_healthy
@@ -50,3 +56,4 @@ services:
 
 volumes:
   pgdata:
+  purchase_uploads:

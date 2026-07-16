@@ -139,6 +139,69 @@ async function migrate() {
     );
     CREATE INDEX IF NOT EXISTS ix_auth_sessions_user ON auth_sessions (user_id);
     CREATE INDEX IF NOT EXISTS ix_auth_sessions_expiry ON auth_sessions (expires_at);
+
+    CREATE TABLE IF NOT EXISTS purchases (
+      purchase_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      order_no VARCHAR(80) NOT NULL UNIQUE,
+      carrier VARCHAR(30),
+      order_time TIMESTAMPTZ NOT NULL,
+      recipient_name VARCHAR(160) NOT NULL,
+      phone VARCHAR(60) NOT NULL,
+      address_line_1 VARCHAR(250) NOT NULL,
+      address_line_2 VARCHAR(250),
+      city VARCHAR(120) NOT NULL,
+      state_province VARCHAR(120) NOT NULL,
+      postal_code VARCHAR(30) NOT NULL,
+      country VARCHAR(100) NOT NULL DEFAULT 'US',
+      status VARCHAR(30) NOT NULL DEFAULT 'Placed',
+      created_by UUID REFERENCES admin_users (user_id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT ck_purchases_carrier CHECK (carrier IS NULL OR carrier IN ('USPS','UPS','FedEx')),
+      CONSTRAINT ck_purchases_status CHECK (status IN ('Draft','Placed','Processing','Shipped','Cancelled'))
+    );
+    CREATE INDEX IF NOT EXISTS ix_purchases_order_time ON purchases (order_time DESC);
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS supplier_status SMALLINT NOT NULL DEFAULT 2;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS supplier_status_str VARCHAR(80) NOT NULL DEFAULT 'Pending Push';
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT '';
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS goods_count INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS supplier_payload JSONB NOT NULL DEFAULT '{}'::jsonb;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS last_sync_error TEXT;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS synced_at TIMESTAMPTZ;
+    CREATE INDEX IF NOT EXISTS ix_purchases_supplier_status ON purchases (supplier_status);
+
+    CREATE TABLE IF NOT EXISTS purchase_items (
+      purchase_item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      purchase_id UUID NOT NULL REFERENCES purchases (purchase_id) ON DELETE CASCADE,
+      line_no INTEGER NOT NULL,
+      product_title VARCHAR(250) NOT NULL,
+      style_id UUID NOT NULL REFERENCES styles (style_id) ON DELETE RESTRICT,
+      style_color_id UUID NOT NULL REFERENCES style_colors (style_color_id) ON DELETE RESTRICT,
+      style_size_id UUID NOT NULL REFERENCES style_sizes (style_size_id) ON DELETE RESTRICT,
+      craft_type SMALLINT NOT NULL,
+      quantity INTEGER NOT NULL,
+      print_position VARCHAR(10),
+      specification VARCHAR(200),
+      remark TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT uq_purchase_item_line UNIQUE (purchase_id, line_no),
+      CONSTRAINT ck_purchase_item_craft CHECK (craft_type IN (1,2)),
+      CONSTRAINT ck_purchase_item_qty CHECK (quantity > 0),
+      CONSTRAINT ck_purchase_item_position CHECK (print_position IS NULL OR print_position IN ('1','2','1,2'))
+    );
+    CREATE INDEX IF NOT EXISTS ix_purchase_items_purchase ON purchase_items (purchase_id);
+
+    CREATE TABLE IF NOT EXISTS purchase_item_images (
+      purchase_image_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      purchase_item_id UUID NOT NULL REFERENCES purchase_items (purchase_item_id) ON DELETE CASCADE,
+      image_role VARCHAR(30) NOT NULL,
+      image_url VARCHAR(600) NOT NULL,
+      original_name VARCHAR(255),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT uq_purchase_item_image_role UNIQUE (purchase_item_id, image_role),
+      CONSTRAINT ck_purchase_image_role CHECK (image_role IN ('front_print','front_mockup','back_print','back_mockup'))
+    );
   `);
   await query('DROP TRIGGER IF EXISTS trg_style_images_updated ON style_images');
   await query('CREATE TRIGGER trg_style_images_updated BEFORE UPDATE ON style_images FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
@@ -148,7 +211,11 @@ async function migrate() {
   await query('CREATE TRIGGER trg_style_decorations_updated BEFORE UPDATE ON style_decorations FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
   await query('DROP TRIGGER IF EXISTS trg_admin_users_updated ON admin_users');
   await query('CREATE TRIGGER trg_admin_users_updated BEFORE UPDATE ON admin_users FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
-  console.log('Migrations applied (catalog measurements and decorations ready).');
+  await query('DROP TRIGGER IF EXISTS trg_purchases_updated ON purchases');
+  await query('CREATE TRIGGER trg_purchases_updated BEFORE UPDATE ON purchases FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
+  await query('DROP TRIGGER IF EXISTS trg_purchase_items_updated ON purchase_items');
+  await query('CREATE TRIGGER trg_purchase_items_updated BEFORE UPDATE ON purchase_items FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
+  console.log('Migrations applied (catalog, authentication and purchasing ready).');
 }
 
 try {

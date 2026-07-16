@@ -11,9 +11,11 @@ import Brands from './pages/Brands.jsx';
 import Styles from './pages/Styles.jsx';
 import StyleDetail from './pages/StyleDetail.jsx';
 import Login from './pages/Login.jsx';
+import Purchase from './pages/Purchase.jsx';
+import Orders from './pages/Orders.jsx';
 import { useAuth } from './auth/AuthContext.jsx';
 
-const CRUMBS = { '': 'Dashboard', suppliers: 'Suppliers', manufacturers: 'Manufacturers', brands: 'Brands', styles: 'Styles' };
+const CRUMBS = { '': 'Dashboard', orders: 'Orders', purchase: 'New Order', suppliers: 'Suppliers', manufacturers: 'Manufacturers', brands: 'Brands', styles: 'Styles' };
 
 export default function App() {
   const { user, loading, logout } = useAuth();
@@ -42,6 +44,8 @@ export default function App() {
         <div className="content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/purchase" element={<Purchase />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/suppliers/:id" element={<SupplierDetail />} />
             <Route path="/manufacturers" element={<Manufacturers />} />

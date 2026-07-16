@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { join } from 'node:path';
 
 import dashboard from './routes/dashboard.js';
 import suppliers from './routes/suppliers.js';
@@ -18,6 +19,7 @@ import images from './routes/images.js';
 import imports from './routes/imports.js';
 import decorations from './routes/decorations.js';
 import auth from './routes/auth.js';
+import purchases from './routes/purchases.js';
 import { authRequired } from './auth.js';
 
 const app = express();
@@ -50,6 +52,11 @@ app.use('/api/prices', prices);
 app.use('/api/images', images);
 app.use('/api/import', imports);
 app.use('/api/decorations', decorations);
+app.use('/api/purchases', purchases);
+app.use('/api/purchase-uploads', express.static(process.env.UPLOAD_DIR || join(process.cwd(), 'uploads'), {
+  fallthrough: false,
+  maxAge: '1d',
+}));
 
 // 404
 app.use((req, res) => res.status(404).json({ error: `Not found: ${req.method} ${req.url}` }));
@@ -58,7 +65,7 @@ app.use((req, res) => res.status(404).json({ error: `Not found: ${req.method} ${
 app.use((err, _req, res, _next) => {
   console.error(err);
   // Postgres unique/violation errors -> 409, otherwise 500
-  const status = err.code === '23505' || err.code === '23503' || err.code === '23514' ? 409 : 500;
+  const status = err.status || (err.code === '23505' || err.code === '23503' || err.code === '23514' ? 409 : 500);
   res.status(status).json({ error: err.message, code: err.code });
 });
 
