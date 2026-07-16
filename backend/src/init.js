@@ -168,7 +168,10 @@ async function migrate() {
     ALTER TABLE purchases ADD COLUMN IF NOT EXISTS supplier_payload JSONB NOT NULL DEFAULT '{}'::jsonb;
     ALTER TABLE purchases ADD COLUMN IF NOT EXISTS last_sync_error TEXT;
     ALTER TABLE purchases ADD COLUMN IF NOT EXISTS synced_at TIMESTAMPTZ;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS supplier_id UUID REFERENCES suppliers (supplier_id) ON DELETE RESTRICT;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS submission_status VARCHAR(30) NOT NULL DEFAULT 'Submitted';
     CREATE INDEX IF NOT EXISTS ix_purchases_supplier_status ON purchases (supplier_status);
+    CREATE INDEX IF NOT EXISTS ix_purchases_supplier ON purchases (supplier_id);
 
     CREATE TABLE IF NOT EXISTS purchase_items (
       purchase_item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -215,6 +218,19 @@ async function migrate() {
   await query('CREATE TRIGGER trg_purchases_updated BEFORE UPDATE ON purchases FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
   await query('DROP TRIGGER IF EXISTS trg_purchase_items_updated ON purchase_items');
   await query('CREATE TRIGGER trg_purchase_items_updated BEFORE UPDATE ON purchase_items FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
+  const riin = await query(`
+    INSERT INTO suppliers
+      (supplier_code,supplier_name,supplier_type,website,api_available,api_provider,catalog_source,
+       default_currency,dropship_available,default_status,remarks)
+    VALUES ('RIIN','RIIN Fulfillment','Distributor','https://tshirt.riin.com',TRUE,'RIIN','API',
+            'USD',TRUE,'Active','Production fulfillment supplier connected through the RIIN signed API.')
+    ON CONFLICT (supplier_code) DO UPDATE SET
+      supplier_name=EXCLUDED.supplier_name,website=EXCLUDED.website,api_available=TRUE,
+      api_provider='RIIN',catalog_source='API',default_status='Active',remarks=EXCLUDED.remarks
+    RETURNING supplier_id
+  `);
+  await query('UPDATE styles SET default_supplier_id=$1 WHERE default_supplier_id IS NULL', [riin.rows[0].supplier_id]);
+  await query('UPDATE purchases SET supplier_id=$1 WHERE supplier_id IS NULL', [riin.rows[0].supplier_id]);
   console.log('Migrations applied (catalog, authentication and purchasing ready).');
 }
 

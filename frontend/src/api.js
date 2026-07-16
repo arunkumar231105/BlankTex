@@ -68,11 +68,12 @@ export const api = {
   purchases: (params) => request(`/purchases${qs(params)}`),
   purchase: (orderNo) => request(`/purchases/${encodeURIComponent(orderNo)}`),
   syncPurchases: (orderNos) => request('/purchases/sync', { method: 'POST', body: { order_nos: orderNos || [] } }),
-  importPurchase: (orderNo) => request('/purchases/import', { method: 'POST', body: { order_no: orderNo } }),
+  importPurchase: (orderNo, supplierId) => request('/purchases/import', { method: 'POST', body: { order_no: orderNo, supplier_id: supplierId } }),
   purchaseDelivery: (orderNo) => request(`/purchases/${encodeURIComponent(orderNo)}/delivery`),
   closePurchase: (orderNo) => request(`/purchases/${encodeURIComponent(orderNo)}/close`, { method: 'POST' }),
   savePurchaseNotes: (orderNo, notes) => request(`/purchases/${encodeURIComponent(orderNo)}/notes`, { method: 'PUT', body: { notes } }),
   updatePurchaseShipping: (orderNo, body) => request(`/purchases/${encodeURIComponent(orderNo)}/shipping`, { method: 'PUT', body }),
   purchaseIntegration: () => request('/purchases/integration'),
   testPurchaseIntegration: () => request('/purchases/integration/test', { method: 'POST' }),
+  retryPurchase: (orderNo) => request(`/purchases/${encodeURIComponent(orderNo)}/retry`, { method: 'POST' }),
 };

@@ -19,7 +19,18 @@ function optionalText(value, max = 250) {
   return result || null;
 }
 
-async function catalogItem(client, item, index) {
+async function fulfillmentSupplier(supplierId) {
+  const id = requiredText(supplierId, 'Supplier', 50);
+  const { rows } = await query(`SELECT supplier_id,supplier_code,supplier_name,api_provider,api_available
+    FROM suppliers WHERE supplier_id=$1 AND default_status='Active'`, [id]);
+  if (!rows[0]) throw httpError('Selected supplier is not active');
+  if (!rows[0].api_available || String(rows[0].api_provider).toUpperCase() !== 'RIIN') {
+    throw httpError(`${rows[0].supplier_name} is not configured for purchase-order API submission`);
+  }
+  return rows[0];
+}
+
+async function catalogItem(client, item, index, supplierId) {
   const quantity = Number.parseInt(item.quantity, 10);
   const craftType = Number.parseInt(item.craft_type, 10);
   if (!Number.isInteger(quantity) || quantity < 1) throw httpError(`Item #${index + 1}: quantity must be at least 1`);
@@ -32,8 +43,9 @@ async function catalogItem(client, item, index) {
        JOIN style_colors c ON c.style_id = s.style_id
        JOIN style_sizes z ON z.style_id = s.style_id
       WHERE s.style_id = $1 AND c.style_color_id = $2 AND z.style_size_id = $3
+        AND s.default_supplier_id = $4
         AND s.active = TRUE AND c.active = TRUE AND z.active = TRUE`,
-    [item.style_id, item.style_color_id, item.style_size_id],
+    [item.style_id, item.style_color_id, item.style_size_id, supplierId],
   );
   if (!rows[0]) throw httpError(`Item #${index + 1}: style, color, and size do not match`);
   const position = optionalText(item.print_position, 10);
@@ -83,12 +95,15 @@ function supplierPayload(body, orderNo, orderTime, carrier, items) {
 }
 
 router.get('/catalog', wrap(async (_req, res) => {
-  const [styles, colors, sizes] = await Promise.all([
-    query(`SELECT s.style_id, s.style_no, s.style_name, b.brand_name FROM styles s JOIN brands b ON b.brand_id=s.brand_id WHERE s.active=TRUE AND s.discontinued=FALSE ORDER BY s.display_order,b.brand_name,s.style_no`),
+  const [suppliers, styles, colors, sizes] = await Promise.all([
+    query(`SELECT supplier_id,supplier_code,supplier_name,api_available,api_provider,website,
+                  (api_available=TRUE AND UPPER(COALESCE(api_provider,''))='RIIN') can_place_order
+             FROM suppliers WHERE default_status='Active' ORDER BY supplier_name`),
+    query(`SELECT s.style_id, s.style_no, s.style_name, s.default_supplier_id supplier_id, b.brand_name FROM styles s JOIN brands b ON b.brand_id=s.brand_id WHERE s.active=TRUE AND s.discontinued=FALSE ORDER BY s.display_order,b.brand_name,s.style_no`),
     query(`SELECT style_color_id,style_id,COALESCE(supplier_color_code,internal_color_code) color_code,color_name,display_name,hex_color FROM style_colors WHERE active=TRUE AND discontinued=FALSE ORDER BY style_id,sort_order,color_name`),
     query(`SELECT style_size_id,style_id,size_code,size_name FROM style_sizes WHERE active=TRUE AND discontinued=FALSE ORDER BY style_id,display_order,size_name`),
   ]);
-  res.json({ styles: styles.rows, colors: colors.rows, sizes: sizes.rows });
+  res.json({ suppliers: suppliers.rows, styles: styles.rows, colors: colors.rows, sizes: sizes.rows });
 }));
 
 router.get('/integration', wrap(async (_req, res) => {
@@ -123,17 +138,20 @@ router.get('/', wrap(async (req, res) => {
   if (req.query.q) { params.push(`%${req.query.q}%`); where.push(`(p.order_no ILIKE $${params.length} OR p.recipient_name ILIKE $${params.length} OR p.city ILIKE $${params.length} OR p.phone ILIKE $${params.length})`); }
   if (req.query.status) { params.push(Number(req.query.status)); where.push(`p.supplier_status=$${params.length}`); }
   const { rows } = await query(`
-    SELECT p.*, GREATEST(p.goods_count,COUNT(pi.purchase_item_id)::int) item_count,
+    SELECT p.*,sup.supplier_name,sup.supplier_code,
+           GREATEST(p.goods_count,COUNT(pi.purchase_item_id)::int) item_count,
            COALESCE(SUM(pi.quantity),0)::int total_quantity
-      FROM purchases p LEFT JOIN purchase_items pi ON pi.purchase_id=p.purchase_id
+      FROM purchases p
+      LEFT JOIN suppliers sup ON sup.supplier_id=p.supplier_id
+      LEFT JOIN purchase_items pi ON pi.purchase_id=p.purchase_id
       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
-     GROUP BY p.purchase_id ORDER BY p.created_at DESC`, params);
+     GROUP BY p.purchase_id,sup.supplier_name,sup.supplier_code ORDER BY p.created_at DESC`, params);
   res.json(rows);
 }));
 
 router.post('/sync', wrap(async (req, res) => {
   let orderNos = Array.isArray(req.body?.order_nos) ? req.body.order_nos : [];
-  if (!orderNos.length) orderNos = (await query('SELECT order_no FROM purchases ORDER BY created_at DESC')).rows.map((row) => row.order_no);
+  if (!orderNos.length) orderNos = (await query("SELECT order_no FROM purchases WHERE submission_status='Submitted' ORDER BY created_at DESC")).rows.map((row) => row.order_no);
   let updated = 0;
   for (let index = 0; index < orderNos.length; index += 100) {
     const batch = orderNos.slice(index, index + 100);
@@ -149,15 +167,16 @@ router.post('/sync', wrap(async (req, res) => {
 
 router.post('/import', wrap(async (req, res) => {
   const orderNo = requiredText(req.body?.order_no, 'Supplier Order ID', 80);
+  const supplier = await fulfillmentSupplier(req.body?.supplier_id || (await query("SELECT supplier_id FROM suppliers WHERE supplier_code='RIIN'")).rows[0]?.supplier_id);
   const result = await supplierPost('/trade/api/interface/queryOrderInfo', { platformOidList: [orderNo] });
   const order = result.data?.[0];
   if (!order) throw httpError('Order not found on supplier portal', 404);
   const { rows } = await query(`
-    INSERT INTO purchases (order_no,carrier,order_time,recipient_name,phone,address_line_1,address_line_2,city,state_province,postal_code,country,status,created_by,supplier_status,supplier_status_str,goods_count,supplier_payload,synced_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'Placed',$12,$13,$14,$15,$16,NOW())
-    ON CONFLICT (order_no) DO UPDATE SET carrier=EXCLUDED.carrier,recipient_name=EXCLUDED.recipient_name,phone=EXCLUDED.phone,address_line_1=EXCLUDED.address_line_1,address_line_2=EXCLUDED.address_line_2,city=EXCLUDED.city,state_province=EXCLUDED.state_province,postal_code=EXCLUDED.postal_code,country=EXCLUDED.country,supplier_status=EXCLUDED.supplier_status,supplier_status_str=EXCLUDED.supplier_status_str,goods_count=EXCLUDED.goods_count,supplier_payload=EXCLUDED.supplier_payload,synced_at=NOW()
+    INSERT INTO purchases (order_no,carrier,order_time,recipient_name,phone,address_line_1,address_line_2,city,state_province,postal_code,country,status,created_by,supplier_status,supplier_status_str,goods_count,supplier_payload,synced_at,supplier_id,submission_status)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'Placed',$12,$13,$14,$15,$16,NOW(),$17,'Submitted')
+    ON CONFLICT (order_no) DO UPDATE SET carrier=EXCLUDED.carrier,recipient_name=EXCLUDED.recipient_name,phone=EXCLUDED.phone,address_line_1=EXCLUDED.address_line_1,address_line_2=EXCLUDED.address_line_2,city=EXCLUDED.city,state_province=EXCLUDED.state_province,postal_code=EXCLUDED.postal_code,country=EXCLUDED.country,supplier_status=EXCLUDED.supplier_status,supplier_status_str=EXCLUDED.supplier_status_str,goods_count=EXCLUDED.goods_count,supplier_payload=EXCLUDED.supplier_payload,supplier_id=EXCLUDED.supplier_id,submission_status='Submitted',synced_at=NOW()
     RETURNING purchase_id,order_no`,
-    [order.platformOid, order.deliveryCourier || null, order.orderTime || new Date(), order.consigneeName || 'Unknown', order.phone || '', order.address || '', order.addressOptional || null, order.receiverCity || '', order.receiverProvince || '', order.postCode || '', order.receiverCountry || 'US', req.user?.user_id || null, order.orderStatus || 2, order.orderStateStr || SUPPLIER_STATUSES[order.orderStatus] || 'Pending Push', order.goodsList?.length || order.goodsTotalQty || 0, order]);
+    [order.platformOid, order.deliveryCourier || null, order.orderTime || new Date(), order.consigneeName || 'Unknown', order.phone || '', order.address || '', order.addressOptional || null, order.receiverCity || '', order.receiverProvince || '', order.postCode || '', order.receiverCountry || 'US', req.user?.user_id || null, order.orderStatus || 2, order.orderStateStr || SUPPLIER_STATUSES[order.orderStatus] || 'Pending Push', order.goodsList?.length || order.goodsTotalQty || 0, order, supplier.supplier_id]);
   res.json({ success: true, ...rows[0] });
 }));
 
@@ -165,6 +184,7 @@ router.post('/', wrap(async (req, res) => {
   const body = req.body || {};
   const items = Array.isArray(body.items) ? body.items : [];
   if (!items.length) throw httpError('Add at least one item');
+  const supplier = await fulfillmentSupplier(body.supplier_id);
   const orderNo = requiredText(body.order_no, 'Order ID', 80);
   const orderTime = new Date(body.order_time);
   if (Number.isNaN(orderTime.getTime())) throw httpError('Order Time is invalid');
@@ -174,18 +194,19 @@ router.post('/', wrap(async (req, res) => {
 
   const validationClient = await pool.connect();
   let enriched;
-  try { enriched = await Promise.all(items.map((item,index) => catalogItem(validationClient,item,index))); }
+  try { enriched = await Promise.all(items.map((item,index) => catalogItem(validationClient,item,index,supplier.supplier_id))); }
   finally { validationClient.release(); }
   const payload = supplierPayload(body, orderNo, orderTime, carrier, enriched);
-  await supplierPost('/trade/api/interface/placeOrder', payload);
 
   const client = await pool.connect();
+  let purchaseId;
   try {
     await client.query('BEGIN');
     const purchase = await client.query(`INSERT INTO purchases
-      (order_no,carrier,order_time,recipient_name,phone,address_line_1,address_line_2,city,state_province,postal_code,country,created_by,supplier_status,supplier_status_str,goods_count,supplier_payload,synced_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,2,'Pending Push',$13,$14,NOW()) RETURNING *`,
-      [orderNo,carrier,orderTime,payload.consigneeName,payload.phone,payload.address,payload.addressOptional||null,payload.receiverCity,payload.receiverProvince,payload.postCode,payload.receiverCountry,req.user?.user_id||null,enriched.length,payload]);
+      (order_no,carrier,order_time,recipient_name,phone,address_line_1,address_line_2,city,state_province,postal_code,country,created_by,supplier_status,supplier_status_str,goods_count,supplier_payload,supplier_id,status,submission_status)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,2,'Pending Push',$13,$14,$15,'Draft','Submitting') RETURNING *`,
+      [orderNo,carrier,orderTime,payload.consigneeName,payload.phone,payload.address,payload.addressOptional||null,payload.receiverCity,payload.receiverProvince,payload.postCode,payload.receiverCountry,req.user?.user_id||null,enriched.length,payload,supplier.supplier_id]);
+    purchaseId = purchase.rows[0].purchase_id;
     for (let index=0; index<enriched.length; index+=1) {
       const item=enriched[index];
       const inserted=await client.query(`INSERT INTO purchase_items (purchase_id,line_no,product_title,style_id,style_color_id,style_size_id,craft_type,quantity,print_position,specification,remark) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING purchase_item_id`,
@@ -193,13 +214,38 @@ router.post('/', wrap(async (req, res) => {
       for (const role of ['front_print','front_mockup','back_print','back_mockup']) if (item.images[role]?.url) await client.query(`INSERT INTO purchase_item_images (purchase_item_id,image_role,image_url,original_name) VALUES ($1,$2,$3,$4)`,[inserted.rows[0].purchase_item_id,role,item.images[role].url,optionalText(item.images[role].original_name,255)]);
     }
     await client.query('COMMIT');
-    res.status(201).json({ success:true,purchase_id:purchase.rows[0].purchase_id,order_no:orderNo });
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }
+
+  try {
+    await supplierPost('/trade/api/interface/placeOrder', payload);
+    await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`, [purchaseId]);
+    return res.status(201).json({ success:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Submitted' });
+  } catch (error) {
+    await query(`UPDATE purchases SET submission_status='Failed',last_sync_error=$1 WHERE purchase_id=$2`, [error.message,purchaseId]);
+    return res.status(202).json({ success:false,order_saved:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Failed',message:error.message });
+  }
+}));
+
+router.post('/:orderNo/retry', wrap(async (req,res) => {
+  const order=(await query(`SELECT p.*,sup.api_provider,sup.api_available FROM purchases p LEFT JOIN suppliers sup ON sup.supplier_id=p.supplier_id WHERE p.order_no=$1`,[req.params.orderNo])).rows[0];
+  if(!order) throw httpError('Order not found',404);
+  if(order.submission_status==='Submitted') throw httpError('Order has already been submitted');
+  if(!order.supplier_payload?.platformOid) throw httpError('Saved supplier payload is missing');
+  await fulfillmentSupplier(order.supplier_id);
+  await query(`UPDATE purchases SET submission_status='Submitting',last_sync_error=NULL WHERE purchase_id=$1`,[order.purchase_id]);
+  try {
+    await supplierPost('/trade/api/interface/placeOrder',order.supplier_payload);
+    await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`,[order.purchase_id]);
+    res.json({success:true,order_no:order.order_no});
+  } catch(error) {
+    await query(`UPDATE purchases SET submission_status='Failed',last_sync_error=$1 WHERE purchase_id=$2`,[error.message,order.purchase_id]);
+    throw error;
+  }
 }));
 
 router.get('/:orderNo', wrap(async (req, res) => {
-  const purchase=(await query('SELECT * FROM purchases WHERE order_no=$1',[req.params.orderNo])).rows[0];
+  const purchase=(await query('SELECT p.*,sup.supplier_name,sup.supplier_code FROM purchases p LEFT JOIN suppliers sup ON sup.supplier_id=p.supplier_id WHERE p.order_no=$1',[req.params.orderNo])).rows[0];
   if (!purchase) throw httpError('Order not found',404);
   const items=(await query(`SELECT pi.*,s.style_no,s.style_name,c.color_name,COALESCE(c.supplier_color_code,c.internal_color_code) color_code,z.size_code,z.size_name FROM purchase_items pi JOIN styles s ON s.style_id=pi.style_id JOIN style_colors c ON c.style_color_id=pi.style_color_id JOIN style_sizes z ON z.style_size_id=pi.style_size_id WHERE pi.purchase_id=$1 ORDER BY pi.line_no`,[purchase.purchase_id])).rows;
   const images=(await query(`SELECT pii.* FROM purchase_item_images pii JOIN purchase_items pi ON pi.purchase_item_id=pii.purchase_item_id WHERE pi.purchase_id=$1`,[purchase.purchase_id])).rows;

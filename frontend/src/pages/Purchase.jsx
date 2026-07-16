@@ -106,10 +106,10 @@ function PurchaseItem({ item, index, catalog, onChange, onRemove, onUpload, uplo
 export default function Purchase() {
   const toast = useToast();
   const navigate = useNavigate();
-  const initialForm = useMemo(() => ({ order_no: generateOrderId(), carrier: '', order_time: localDateTime(), recipient_name: '', phone: '', address_line_1: '', address_line_2: '', city: '', state_province: '', postal_code: '', country: 'US' }), []);
+  const initialForm = useMemo(() => ({ supplier_id: '', order_no: generateOrderId(), carrier: '', order_time: localDateTime(), recipient_name: '', phone: '', address_line_1: '', address_line_2: '', city: '', state_province: '', postal_code: '', country: 'US' }), []);
   const [form, setForm] = useState(initialForm);
   const [items, setItems] = useState([]);
-  const [catalog, setCatalog] = useState({ styles: [], colors: [], sizes: [] });
+  const [catalog, setCatalog] = useState({ suppliers: [], styles: [], colors: [], sizes: [] });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState({});
@@ -120,7 +120,10 @@ export default function Purchase() {
     api.purchaseCatalog().then(setCatalog).catch((err) => setError(err.message)).finally(() => setLoading(false));
   }, []);
 
-  const setField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const setField = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    if (field === 'supplier_id') setItems([]);
+  };
   const changeItem = (index, field, value) => setItems((current) => current.map((entry, itemIndex) => {
     if (itemIndex !== index) return entry;
     if (field === 'style_id') return { ...entry, style_id: value, style_color_id: '', style_size_id: '' };
@@ -152,6 +155,7 @@ export default function Purchase() {
   };
 
   const validateItems = () => {
+    if (!form.supplier_id) return 'Select a supplier first';
     if (!items.length) return 'Add at least one item';
     for (let index = 0; index < items.length; index += 1) {
       const item = items[index];
@@ -174,8 +178,9 @@ export default function Purchase() {
     setSubmitting(true);
     try {
       const result = await api.createPurchase({ ...form, order_time: new Date(form.order_time).toISOString(), items });
-      toast.success(`Order ${result.order_no} placed successfully!`);
-      navigate('/orders', { state: { createdOrder: result.order_no } });
+      if (result.success) toast.success(`Order ${result.order_no} placed successfully!`);
+      else toast.error(`Order saved, but supplier submission failed: ${result.message}`);
+      navigate('/orders', { state: { createdOrder: result.order_no, submissionFailed: !result.success } });
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -186,17 +191,29 @@ export default function Purchase() {
   if (loading) return <div className="loading">Loading purchase catalog…</div>;
   if (error) return <div className="error-box">{error}</div>;
 
+  const selectedSupplier = catalog.suppliers.find((supplier) => supplier.supplier_id === form.supplier_id);
+  const supplierCatalog = {
+    ...catalog,
+    styles: catalog.styles.filter((style) => style.supplier_id === form.supplier_id),
+  };
+
   return (
     <div className="purchase-page">
       <div className="page-head"><div><div className="page-title">New Order</div><div className="page-desc">Place a new BlankTex purchase order</div></div></div>
       <form onSubmit={submit}>
-        <Section number="1" title="Order Info"><div className="purchase-grid two">
+        <Section number="1" title="Supplier Selection">
+          <div className="purchase-field full"><label>Fulfillment Supplier *</label><select value={form.supplier_id} onChange={(event) => setField('supplier_id', event.target.value)} required><option value="">— Select Supplier Before Creating Order —</option>{catalog.suppliers.map((supplier) => <option key={supplier.supplier_id} value={supplier.supplier_id} disabled={!supplier.can_place_order}>{supplier.supplier_name} ({supplier.supplier_code}){supplier.can_place_order ? ' — API Connected' : ' — API Not Configured'}</option>)}</select></div>
+          {selectedSupplier && <div className={`supplier-choice ${selectedSupplier.can_place_order ? 'ready' : 'blocked'}`}><span>{selectedSupplier.can_place_order ? '✓' : '!'}</span><div><b>{selectedSupplier.supplier_name}</b><small>{selectedSupplier.can_place_order ? `Connected through ${selectedSupplier.api_provider} production API` : 'This supplier cannot receive API purchase orders yet.'}</small></div></div>}
+        </Section>
+
+        <fieldset className="purchase-workflow" disabled={!selectedSupplier?.can_place_order}>
+        <Section number="2" title="Order Info"><div className="purchase-grid two">
           <div className="purchase-field"><label>Order ID * <small>(must be unique)</small></label><input value={form.order_no} onChange={(e) => setField('order_no', e.target.value)} required /></div>
           <div className="purchase-field"><label>Carrier</label><select value={form.carrier} onChange={(e) => setField('carrier', e.target.value)}><option value="">— Select Carrier —</option><option>USPS</option><option>UPS</option><option>FedEx</option></select></div>
           <div className="purchase-field full"><label>Order Time *</label><input type="datetime-local" value={form.order_time} onChange={(e) => setField('order_time', e.target.value)} required /></div>
         </div></Section>
 
-        <Section number="2" title="Recipient"><div className="purchase-grid two">
+        <Section number="3" title="Recipient"><div className="purchase-grid two">
           <div className="purchase-field"><label>Full Name *</label><input value={form.recipient_name} onChange={(e) => setField('recipient_name', e.target.value)} required /></div>
           <div className="purchase-field"><label>Phone *</label><input type="tel" value={form.phone} onChange={(e) => setField('phone', e.target.value)} required /></div>
           <div className="purchase-field full"><label>Address Line 1 *</label><input value={form.address_line_1} onChange={(e) => setField('address_line_1', e.target.value)} required /></div>
@@ -207,18 +224,21 @@ export default function Purchase() {
           <div className="purchase-field"><label>Country *</label><input value={form.country} onChange={(e) => setField('country', e.target.value)} required /></div>
         </div></Section>
 
-        <Section number="3" title="Items">
+        <Section number="4" title="Items">
           <button type="button" className="btn purchase-add" onClick={() => setItems((current) => [...current, emptyItem()])}>＋ Add Item</button>
           {!items.length ? <div className="purchase-empty">No items yet — click <b>Add Item</b> to start</div> : items.map((item, index) => (
-            <PurchaseItem key={index} item={item} index={index} catalog={catalog}
+            <PurchaseItem key={index} item={item} index={index} catalog={supplierCatalog}
               onChange={(field, value) => changeItem(index, field, value)}
               onRemove={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}
               onUpload={(role, file) => uploadImage(index, role, file)} uploading={uploading[`${index}:front_print`] || uploading[`${index}:front_mockup`] || uploading[`${index}:back_print`] || uploading[`${index}:back_mockup`]}
             />
           ))}
         </Section>
+        </fieldset>
 
-        <div className="purchase-actions"><button type="button" className="btn" onClick={() => navigate('/orders')}>Cancel</button><button type="button" className="btn" onClick={() => setPreview((value) => !value)}>Preview JSON</button><button type="submit" className="btn primary" disabled={submitting || Object.keys(uploading).length}>{submitting ? 'Sending to supplier…' : '→ Place Order'}</button></div>
+        {!form.supplier_id && <div className="supplier-required-note">Select an API-connected supplier above to unlock the purchase-order form.</div>}
+
+        <div className="purchase-actions"><button type="button" className="btn" onClick={() => navigate('/orders')}>Cancel</button><button type="button" className="btn" onClick={() => setPreview((value) => !value)} disabled={!selectedSupplier?.can_place_order}>Preview JSON</button><button type="submit" className="btn primary" disabled={!selectedSupplier?.can_place_order || submitting || Object.keys(uploading).length}>{submitting ? 'Sending to supplier…' : '→ Place Order'}</button></div>
         {preview && <pre className="purchase-preview">{JSON.stringify({ ...form, items }, null, 2)}</pre>}
       </form>
     </div>
