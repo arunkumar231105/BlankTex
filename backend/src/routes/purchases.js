@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { pool, query } from '../db.js';
 import { cloudinaryUpload, supplierConfig, supplierPost, SUPPLIER_STATUSES } from '../supplier.js';
+import { syncRiinCatalog } from '../supplierCatalog.js';
 import { wrap } from './crud.js';
 
 const router = Router();
@@ -36,18 +37,21 @@ async function catalogItem(client, item, index, supplierId) {
   if (!Number.isInteger(quantity) || quantity < 1) throw httpError(`Item #${index + 1}: quantity must be at least 1`);
   if (![1, 2].includes(craftType)) throw httpError(`Item #${index + 1}: craft type is invalid`);
   const { rows } = await client.query(
-    `SELECT s.style_id, s.style_no, s.style_name,
-            c.style_color_id, COALESCE(c.supplier_color_code, c.internal_color_code) AS color_code,
-            c.color_name, z.style_size_id, z.size_code, z.size_name
-       FROM styles s
-       JOIN style_colors c ON c.style_id = s.style_id
-       JOIN style_sizes z ON z.style_id = s.style_id
-      WHERE s.style_id = $1 AND c.style_color_id = $2 AND z.style_size_id = $3
-        AND s.default_supplier_id = $4
+    `SELECT s.supplier_style_id AS style_id, s.style_code AS style_no, s.display_name AS style_name,
+            s.craft_types, c.supplier_color_id AS style_color_id, c.color_code,
+            c.display_name AS color_name, z.supplier_size_id AS style_size_id,
+            z.size_code, z.display_name AS size_name
+       FROM supplier_catalog_styles s
+       JOIN supplier_catalog_colors c ON c.supplier_id = s.supplier_id
+       JOIN supplier_catalog_sizes z ON z.supplier_id = s.supplier_id
+      WHERE s.supplier_style_id = $1 AND c.supplier_color_id = $2 AND z.supplier_size_id = $3
+        AND s.supplier_id = $4 AND c.supplier_id = $4 AND z.supplier_id = $4
         AND s.active = TRUE AND c.active = TRUE AND z.active = TRUE`,
     [item.style_id, item.style_color_id, item.style_size_id, supplierId],
   );
   if (!rows[0]) throw httpError(`Item #${index + 1}: style, color, and size do not match`);
+  const supportedCrafts = String(rows[0].craft_types || '').split(',').map(Number).filter(Number.isInteger);
+  if (supportedCrafts.length && !supportedCrafts.includes(craftType)) throw httpError(`Item #${index + 1}: selected style does not support that craft type`);
   const position = optionalText(item.print_position, 10);
   if (position && !['1', '2', '1,2'].includes(position)) throw httpError(`Item #${index + 1}: print position is invalid`);
   const images = item.images || {};
@@ -99,11 +103,23 @@ router.get('/catalog', wrap(async (_req, res) => {
     query(`SELECT supplier_id,supplier_code,supplier_name,api_available,api_provider,website,
                   (api_available=TRUE AND UPPER(COALESCE(api_provider,''))='RIIN') can_place_order
              FROM suppliers WHERE default_status='Active' ORDER BY supplier_name`),
-    query(`SELECT s.style_id, s.style_no, s.style_name, s.default_supplier_id supplier_id, b.brand_name FROM styles s JOIN brands b ON b.brand_id=s.brand_id WHERE s.active=TRUE AND s.discontinued=FALSE ORDER BY s.display_order,b.brand_name,s.style_no`),
-    query(`SELECT style_color_id,style_id,COALESCE(supplier_color_code,internal_color_code) color_code,color_name,display_name,hex_color FROM style_colors WHERE active=TRUE AND discontinued=FALSE ORDER BY style_id,sort_order,color_name`),
-    query(`SELECT style_size_id,style_id,size_code,size_name FROM style_sizes WHERE active=TRUE AND discontinued=FALSE ORDER BY style_id,display_order,size_name`),
+    query(`SELECT supplier_style_id style_id,supplier_id,style_code style_no,display_name style_name,
+                  style_name raw_name,craft_types,images,price_mode,last_synced_at
+             FROM supplier_catalog_styles WHERE active=TRUE ORDER BY supplier_id,display_name,style_code`),
+    query(`SELECT supplier_color_id style_color_id,supplier_id,color_code,display_name color_name,
+                  display_name,color_name raw_name,last_synced_at
+             FROM supplier_catalog_colors WHERE active=TRUE ORDER BY supplier_id,display_name,color_code`),
+    query(`SELECT supplier_size_id style_size_id,supplier_id,size_code,display_name size_name,
+                  size_name raw_name,last_synced_at
+             FROM supplier_catalog_sizes WHERE active=TRUE ORDER BY supplier_id,display_name,size_code`),
   ]);
   res.json({ suppliers: suppliers.rows, styles: styles.rows, colors: colors.rows, sizes: sizes.rows });
+}));
+
+router.post('/catalog/sync', wrap(async (req, res) => {
+  const supplier = await fulfillmentSupplier(req.body?.supplier_id);
+  const counts = await syncRiinCatalog(supplier.supplier_id);
+  res.json({ success: true, supplier_id: supplier.supplier_id, ...counts });
 }));
 
 router.get('/integration', wrap(async (_req, res) => {
@@ -209,8 +225,11 @@ router.post('/', wrap(async (req, res) => {
     purchaseId = purchase.rows[0].purchase_id;
     for (let index=0; index<enriched.length; index+=1) {
       const item=enriched[index];
-      const inserted=await client.query(`INSERT INTO purchase_items (purchase_id,line_no,product_title,style_id,style_color_id,style_size_id,craft_type,quantity,print_position,specification,remark) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING purchase_item_id`,
-        [purchase.rows[0].purchase_id,index+1,item.product_title,item.style_id,item.style_color_id,item.style_size_id,item.craftType,item.quantity,item.position,optionalText(item.specification,200),optionalText(item.remark,2000)]);
+      const skuCode = `${item.style_no}-${item.color_code}-${item.size_code}`;
+      const inserted=await client.query(`INSERT INTO purchase_items
+        (purchase_id,line_no,product_title,supplier_style_id,supplier_color_id,supplier_size_id,supplier_sku_code,craft_type,quantity,print_position,specification,remark)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING purchase_item_id`,
+        [purchase.rows[0].purchase_id,index+1,item.product_title,item.style_id,item.style_color_id,item.style_size_id,skuCode,item.craftType,item.quantity,item.position,optionalText(item.specification,200),optionalText(item.remark,2000)]);
       for (const role of ['front_print','front_mockup','back_print','back_mockup']) if (item.images[role]?.url) await client.query(`INSERT INTO purchase_item_images (purchase_item_id,image_role,image_url,original_name) VALUES ($1,$2,$3,$4)`,[inserted.rows[0].purchase_item_id,role,item.images[role].url,optionalText(item.images[role].original_name,255)]);
     }
     await client.query('COMMIT');
@@ -247,7 +266,18 @@ router.post('/:orderNo/retry', wrap(async (req,res) => {
 router.get('/:orderNo', wrap(async (req, res) => {
   const purchase=(await query('SELECT p.*,sup.supplier_name,sup.supplier_code FROM purchases p LEFT JOIN suppliers sup ON sup.supplier_id=p.supplier_id WHERE p.order_no=$1',[req.params.orderNo])).rows[0];
   if (!purchase) throw httpError('Order not found',404);
-  const items=(await query(`SELECT pi.*,s.style_no,s.style_name,c.color_name,COALESCE(c.supplier_color_code,c.internal_color_code) color_code,z.size_code,z.size_name FROM purchase_items pi JOIN styles s ON s.style_id=pi.style_id JOIN style_colors c ON c.style_color_id=pi.style_color_id JOIN style_sizes z ON z.style_size_id=pi.style_size_id WHERE pi.purchase_id=$1 ORDER BY pi.line_no`,[purchase.purchase_id])).rows;
+  const items=(await query(`SELECT pi.*,
+      COALESCE(ss.style_code,s.style_no) style_no,COALESCE(ss.display_name,s.style_name) style_name,
+      COALESCE(sc.display_name,c.color_name) color_name,COALESCE(sc.color_code,c.supplier_color_code,c.internal_color_code) color_code,
+      COALESCE(sz.size_code,z.size_code) size_code,COALESCE(sz.display_name,z.size_name) size_name
+    FROM purchase_items pi
+    LEFT JOIN supplier_catalog_styles ss ON ss.supplier_style_id=pi.supplier_style_id
+    LEFT JOIN supplier_catalog_colors sc ON sc.supplier_color_id=pi.supplier_color_id
+    LEFT JOIN supplier_catalog_sizes sz ON sz.supplier_size_id=pi.supplier_size_id
+    LEFT JOIN styles s ON s.style_id=pi.style_id
+    LEFT JOIN style_colors c ON c.style_color_id=pi.style_color_id
+    LEFT JOIN style_sizes z ON z.style_size_id=pi.style_size_id
+    WHERE pi.purchase_id=$1 ORDER BY pi.line_no`,[purchase.purchase_id])).rows;
   const images=(await query(`SELECT pii.* FROM purchase_item_images pii JOIN purchase_items pi ON pi.purchase_item_id=pii.purchase_item_id WHERE pi.purchase_id=$1`,[purchase.purchase_id])).rows;
   for (const item of items) item.images=images.filter((image)=>image.purchase_item_id===item.purchase_item_id);
   res.json({ ...purchase,items });

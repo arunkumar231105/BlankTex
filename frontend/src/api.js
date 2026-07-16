@@ -63,6 +63,7 @@ export const api = {
   imagesByStyle: (id) => request(`/images/by-style/${id}`),
   decorationsByStyle: (id) => request(`/decorations/by-style/${id}`),
   purchaseCatalog: () => request('/purchases/catalog'),
+  syncPurchaseCatalog: (supplierId) => request('/purchases/catalog/sync', { method: 'POST', body: { supplier_id: supplierId } }),
   createPurchase: (body) => request('/purchases', { method: 'POST', body }),
   uploadPurchaseImage: (body) => request('/purchases/upload', { method: 'POST', body }),
   purchases: (params) => request(`/purchases${qs(params)}`),

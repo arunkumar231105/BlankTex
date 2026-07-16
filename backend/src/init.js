@@ -9,6 +9,7 @@ import { dirname, join } from 'node:path';
 import { pool, query } from './db.js';
 import { seedCatalogIfSafe, syncCatalogColors } from './catalog.js';
 import { seedAdminFromEnv } from './auth.js';
+import { syncRiinCatalog } from './supplierCatalog.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCHEMA_PATH = process.env.SCHEMA_PATH || join(__dirname, '..', '..', 'blanktex_schema.sql');
@@ -173,6 +174,26 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS ix_purchases_supplier_status ON purchases (supplier_status);
     CREATE INDEX IF NOT EXISTS ix_purchases_supplier ON purchases (supplier_id);
 
+    CREATE TABLE IF NOT EXISTS supplier_catalog_styles (
+      supplier_style_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), supplier_id UUID NOT NULL REFERENCES suppliers(supplier_id) ON DELETE CASCADE,
+      style_code VARCHAR(80) NOT NULL, style_name VARCHAR(250) NOT NULL, display_name VARCHAR(250) NOT NULL,
+      craft_types VARCHAR(30), images JSONB NOT NULL DEFAULT '[]'::jsonb, price_mode INTEGER, raw_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      active BOOLEAN NOT NULL DEFAULT TRUE, last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(supplier_id,style_code)
+    );
+    CREATE TABLE IF NOT EXISTS supplier_catalog_colors (
+      supplier_color_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), supplier_id UUID NOT NULL REFERENCES suppliers(supplier_id) ON DELETE CASCADE,
+      color_code VARCHAR(80) NOT NULL, color_name VARCHAR(200) NOT NULL, display_name VARCHAR(200) NOT NULL,
+      raw_data JSONB NOT NULL DEFAULT '{}'::jsonb, active BOOLEAN NOT NULL DEFAULT TRUE, last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(supplier_id,color_code)
+    );
+    CREATE TABLE IF NOT EXISTS supplier_catalog_sizes (
+      supplier_size_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), supplier_id UUID NOT NULL REFERENCES suppliers(supplier_id) ON DELETE CASCADE,
+      size_code VARCHAR(80) NOT NULL, size_name VARCHAR(120) NOT NULL, display_name VARCHAR(120) NOT NULL,
+      raw_data JSONB NOT NULL DEFAULT '{}'::jsonb, active BOOLEAN NOT NULL DEFAULT TRUE, last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(supplier_id,size_code)
+    );
+    CREATE INDEX IF NOT EXISTS ix_supplier_catalog_styles_supplier ON supplier_catalog_styles(supplier_id,active);
+    CREATE INDEX IF NOT EXISTS ix_supplier_catalog_colors_supplier ON supplier_catalog_colors(supplier_id,active);
+    CREATE INDEX IF NOT EXISTS ix_supplier_catalog_sizes_supplier ON supplier_catalog_sizes(supplier_id,active);
+
     CREATE TABLE IF NOT EXISTS purchase_items (
       purchase_item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       purchase_id UUID NOT NULL REFERENCES purchases (purchase_id) ON DELETE CASCADE,
@@ -193,6 +214,13 @@ async function migrate() {
       CONSTRAINT ck_purchase_item_qty CHECK (quantity > 0),
       CONSTRAINT ck_purchase_item_position CHECK (print_position IS NULL OR print_position IN ('1','2','1,2'))
     );
+    ALTER TABLE purchase_items ALTER COLUMN style_id DROP NOT NULL;
+    ALTER TABLE purchase_items ALTER COLUMN style_color_id DROP NOT NULL;
+    ALTER TABLE purchase_items ALTER COLUMN style_size_id DROP NOT NULL;
+    ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS supplier_style_id UUID REFERENCES supplier_catalog_styles(supplier_style_id) ON DELETE RESTRICT;
+    ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS supplier_color_id UUID REFERENCES supplier_catalog_colors(supplier_color_id) ON DELETE RESTRICT;
+    ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS supplier_size_id UUID REFERENCES supplier_catalog_sizes(supplier_size_id) ON DELETE RESTRICT;
+    ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS supplier_sku_code VARCHAR(260);
     CREATE INDEX IF NOT EXISTS ix_purchase_items_purchase ON purchase_items (purchase_id);
 
     CREATE TABLE IF NOT EXISTS purchase_item_images (
@@ -231,6 +259,12 @@ async function migrate() {
   `);
   await query('UPDATE styles SET default_supplier_id=$1 WHERE default_supplier_id IS NULL', [riin.rows[0].supplier_id]);
   await query('UPDATE purchases SET supplier_id=$1 WHERE supplier_id IS NULL', [riin.rows[0].supplier_id]);
+  try {
+    const synced = await syncRiinCatalog(riin.rows[0].supplier_id);
+    console.log('RIIN supplier catalog synced:', synced);
+  } catch (error) {
+    console.warn('RIIN catalog sync skipped; using last saved catalog:', error.message);
+  }
   console.log('Migrations applied (catalog, authentication and purchasing ready).');
 }
 

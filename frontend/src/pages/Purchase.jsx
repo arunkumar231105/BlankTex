@@ -60,8 +60,10 @@ function UploadZone({ label, hint, image, uploading, onFile, onClear }) {
 }
 
 function PurchaseItem({ item, index, catalog, onChange, onRemove, onUpload, uploading }) {
-  const colors = catalog.colors.filter((entry) => entry.style_id === item.style_id);
-  const sizes = catalog.sizes.filter((entry) => entry.style_id === item.style_id);
+  const colors = catalog.colors;
+  const sizes = catalog.sizes;
+  const selectedStyle = catalog.styles.find((entry) => entry.style_id === item.style_id);
+  const supportedCrafts = String(selectedStyle?.craft_types || '1,2').split(',').map((value) => value.trim());
   const bothSides = item.print_position === '1,2';
   const imageField = (role, label, hint) => (
     <UploadZone
@@ -82,8 +84,12 @@ function PurchaseItem({ item, index, catalog, onChange, onRemove, onUpload, uplo
         <div className="purchase-field"><label>Color *</label><select value={item.style_color_id} onChange={(e) => onChange('style_color_id', e.target.value)} disabled={!item.style_id} required><option value="">— Select Color —</option>{colors.map((color) => <option key={color.style_color_id} value={color.style_color_id}>{color.display_name || color.color_name} ({color.color_code})</option>)}</select></div>
         <div className="purchase-field"><label>Size *</label><select value={item.style_size_id} onChange={(e) => onChange('style_size_id', e.target.value)} disabled={!item.style_id} required><option value="">— Select Size —</option>{sizes.map((size) => <option key={size.style_size_id} value={size.style_size_id}>{size.size_name} ({size.size_code})</option>)}</select></div>
       </div>
+      {selectedStyle && <div className="supplier-style-preview">
+        {selectedStyle.images?.[0] ? <img src={selectedStyle.images[0]} alt={selectedStyle.style_name} /> : <div className="supplier-style-placeholder">👕</div>}
+        <div><b>{selectedStyle.style_name}</b><span>Supplier style: {selectedStyle.style_no}</span><small>{selectedStyle.raw_name !== selectedStyle.style_name ? selectedStyle.raw_name : 'Live RIIN catalog item'} · SKU: {selectedStyle.style_no}-COLOR-SIZE</small></div>
+      </div>}
       <div className="purchase-grid two">
-        <div className="purchase-field"><label>Craft Type *</label><select value={item.craft_type} onChange={(e) => onChange('craft_type', e.target.value)}><option value="1">Heat Transfer (烫画)</option><option value="2">DTG Direct-to-Garment (直喷)</option></select></div>
+        <div className="purchase-field"><label>Craft Type *</label><select value={item.craft_type} onChange={(e) => onChange('craft_type', e.target.value)}><option value="1" disabled={!supportedCrafts.includes('1')}>Heat Transfer (烫画)</option><option value="2" disabled={!supportedCrafts.includes('2')}>DTG Direct-to-Garment (直喷)</option></select></div>
         <div className="purchase-field"><label>Quantity *</label><input type="number" min="1" value={item.quantity} onChange={(e) => onChange('quantity', e.target.value)} required /></div>
       </div>
       <div className="purchase-grid three">
@@ -112,6 +118,7 @@ export default function Purchase() {
   const [catalog, setCatalog] = useState({ suppliers: [], styles: [], colors: [], sizes: [] });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [syncingCatalog, setSyncingCatalog] = useState(false);
   const [uploading, setUploading] = useState({});
   const [preview, setPreview] = useState(false);
   const [error, setError] = useState('');
@@ -126,9 +133,29 @@ export default function Purchase() {
   };
   const changeItem = (index, field, value) => setItems((current) => current.map((entry, itemIndex) => {
     if (itemIndex !== index) return entry;
-    if (field === 'style_id') return { ...entry, style_id: value, style_color_id: '', style_size_id: '' };
+    if (field === 'style_id') {
+      const style = catalog.styles.find((candidate) => candidate.style_id === value);
+      const firstCraft = String(style?.craft_types || '1').split(',')[0].trim() || '1';
+      return { ...entry, style_id: value, style_color_id: '', style_size_id: '', craft_type: firstCraft };
+    }
     return { ...entry, [field]: value };
   }));
+
+  const syncCatalog = async () => {
+    if (!form.supplier_id) return;
+    setSyncingCatalog(true);
+    try {
+      const result = await api.syncPurchaseCatalog(form.supplier_id);
+      const refreshed = await api.purchaseCatalog();
+      setCatalog(refreshed);
+      setItems([]);
+      toast.success(`Supplier catalog synced: ${result.styles} styles, ${result.colors} colors, ${result.sizes} sizes`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSyncingCatalog(false);
+    }
+  };
 
   const uploadImage = async (index, role, file) => {
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return toast.error('Use a PNG, JPG, or WebP image');
@@ -195,6 +222,8 @@ export default function Purchase() {
   const supplierCatalog = {
     ...catalog,
     styles: catalog.styles.filter((style) => style.supplier_id === form.supplier_id),
+    colors: catalog.colors.filter((color) => color.supplier_id === form.supplier_id),
+    sizes: catalog.sizes.filter((size) => size.supplier_id === form.supplier_id),
   };
 
   return (
@@ -203,7 +232,7 @@ export default function Purchase() {
       <form onSubmit={submit}>
         <Section number="1" title="Supplier Selection">
           <div className="purchase-field full"><label>Fulfillment Supplier *</label><select value={form.supplier_id} onChange={(event) => setField('supplier_id', event.target.value)} required><option value="">— Select Supplier Before Creating Order —</option>{catalog.suppliers.map((supplier) => <option key={supplier.supplier_id} value={supplier.supplier_id} disabled={!supplier.can_place_order}>{supplier.supplier_name} ({supplier.supplier_code}){supplier.can_place_order ? ' — API Connected' : ' — API Not Configured'}</option>)}</select></div>
-          {selectedSupplier && <div className={`supplier-choice ${selectedSupplier.can_place_order ? 'ready' : 'blocked'}`}><span>{selectedSupplier.can_place_order ? '✓' : '!'}</span><div><b>{selectedSupplier.supplier_name}</b><small>{selectedSupplier.can_place_order ? `Connected through ${selectedSupplier.api_provider} production API` : 'This supplier cannot receive API purchase orders yet.'}</small></div></div>}
+          {selectedSupplier && <div className={`supplier-choice ${selectedSupplier.can_place_order ? 'ready' : 'blocked'}`}><span>{selectedSupplier.can_place_order ? '✓' : '!'}</span><div><b>{selectedSupplier.supplier_name}</b><small>{selectedSupplier.can_place_order ? `Connected through ${selectedSupplier.api_provider} production API · ${supplierCatalog.styles.length} styles · ${supplierCatalog.colors.length} colors · ${supplierCatalog.sizes.length} sizes` : 'This supplier cannot receive API purchase orders yet.'}</small></div>{selectedSupplier.can_place_order && <button type="button" className="btn supplier-sync" onClick={syncCatalog} disabled={syncingCatalog}>{syncingCatalog ? 'Syncing…' : '↻ Sync Catalog'}</button>}</div>}
         </Section>
 
         <fieldset className="purchase-workflow" disabled={!selectedSupplier?.can_place_order}>
