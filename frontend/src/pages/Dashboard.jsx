@@ -26,7 +26,7 @@ export default function Dashboard() {
   const loadList = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const res = await api.list('styles', { ...query, supplier });
+      const res = await api.list('styles', { ...query, supplier, visibility: 'dashboard' });
       setList(res);
       if (res.data.length && !res.data.some((s) => s.style_id === selectedId)) {
         setSelectedId(res.data[0].style_id);

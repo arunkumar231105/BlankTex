@@ -178,7 +178,8 @@ async function migrate() {
       supplier_style_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), supplier_id UUID NOT NULL REFERENCES suppliers(supplier_id) ON DELETE CASCADE,
       style_code VARCHAR(80) NOT NULL, style_name VARCHAR(250) NOT NULL, display_name VARCHAR(250) NOT NULL,
       craft_types VARCHAR(30), images JSONB NOT NULL DEFAULT '[]'::jsonb, price_mode INTEGER, raw_data JSONB NOT NULL DEFAULT '{}'::jsonb,
-      active BOOLEAN NOT NULL DEFAULT TRUE, last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(supplier_id,style_code)
+      active BOOLEAN NOT NULL DEFAULT TRUE, enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(supplier_id,style_code)
     );
     CREATE TABLE IF NOT EXISTS supplier_catalog_colors (
       supplier_color_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), supplier_id UUID NOT NULL REFERENCES suppliers(supplier_id) ON DELETE CASCADE,
@@ -193,6 +194,7 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS ix_supplier_catalog_styles_supplier ON supplier_catalog_styles(supplier_id,active);
     CREATE INDEX IF NOT EXISTS ix_supplier_catalog_colors_supplier ON supplier_catalog_colors(supplier_id,active);
     CREATE INDEX IF NOT EXISTS ix_supplier_catalog_sizes_supplier ON supplier_catalog_sizes(supplier_id,active);
+    ALTER TABLE supplier_catalog_styles ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
 
     CREATE TABLE IF NOT EXISTS purchase_items (
       purchase_item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

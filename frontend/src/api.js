@@ -49,6 +49,8 @@ export const api = {
   dashboardStats: () => request('/dashboard/stats'),
   styleFilters: () => request('/styles/filters'),
   styleDetail: (id) => request(`/styles/${id}`),
+  supplierCatalogStyles: (params) => request(`/styles/supplier-catalog/manage${qs(params)}`),
+  setSupplierStyleStatus: (id, enabled) => request(`/styles/supplier-catalog/${id}/status`, { method: 'PUT', body: { enabled } }),
   generateSkus: (id) => request(`/styles/${id}/generate-skus`, { method: 'POST' }),
 
   // nested lists

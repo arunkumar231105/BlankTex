@@ -46,7 +46,7 @@ async function catalogItem(client, item, index, supplierId) {
        JOIN supplier_catalog_sizes z ON z.supplier_id = s.supplier_id
       WHERE s.supplier_style_id = $1 AND c.supplier_color_id = $2 AND z.supplier_size_id = $3
         AND s.supplier_id = $4 AND c.supplier_id = $4 AND z.supplier_id = $4
-        AND s.active = TRUE AND c.active = TRUE AND z.active = TRUE`,
+        AND s.active = TRUE AND s.enabled = TRUE AND c.active = TRUE AND z.active = TRUE`,
     [item.style_id, item.style_color_id, item.style_size_id, supplierId],
   );
   if (!rows[0]) throw httpError(`Item #${index + 1}: style, color, and size do not match`);
@@ -105,7 +105,7 @@ router.get('/catalog', wrap(async (_req, res) => {
              FROM suppliers WHERE default_status='Active' ORDER BY supplier_name`),
     query(`SELECT supplier_style_id style_id,supplier_id,style_code style_no,display_name style_name,
                   style_name raw_name,craft_types,images,price_mode,last_synced_at
-             FROM supplier_catalog_styles WHERE active=TRUE ORDER BY supplier_id,display_name,style_code`),
+             FROM supplier_catalog_styles WHERE active=TRUE AND enabled=TRUE ORDER BY supplier_id,display_name,style_code`),
     query(`SELECT supplier_color_id style_color_id,supplier_id,color_code,display_name color_name,
                   display_name,color_name raw_name,last_synced_at
              FROM supplier_catalog_colors WHERE active=TRUE ORDER BY supplier_id,display_name,color_code`),

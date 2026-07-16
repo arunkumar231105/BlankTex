@@ -79,7 +79,7 @@ export default function StylePreview({ detail, loading }) {
                 </div>
               )}
             </div>
-            {images.length > 0 && (
+            {images.length > 1 && (
               <div className="pv-thumbs">
                 {images.map((img, i) => (
                   <button key={img.style_image_id} className={`t${i === activeImg ? ' active' : ''}`}
