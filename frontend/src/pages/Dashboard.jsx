@@ -58,7 +58,12 @@ export default function Dashboard() {
 
       <div className="dash-grid">
         <div>
-          <SupplierSelect suppliers={suppliers} value={supplier} onChange={(v) => { setSupplier(v); patchQuery({ page: 1 }); }} />
+          <SupplierSelect suppliers={suppliers} value={supplier} onChange={(v) => {
+            setSupplier(v);
+            setQuery((current) => ({ ...current, category: '', gender: '', fit: '', page: 1 }));
+            setSelectedId(null);
+            setDetail(null);
+          }} />
           <div style={{ height: 16 }} />
           <StylesBrowser
             filters={filters}
@@ -69,6 +74,7 @@ export default function Dashboard() {
             selectedId={selectedId}
             onSelect={setSelectedId}
             onQuery={patchQuery}
+            supplierSelected={Boolean(supplier)}
           />
         </div>
         <StylePreview detail={detail} loading={loading} />

@@ -36,8 +36,9 @@ export default function StylePreview({ detail, loading }) {
           <h2>{s.style_no} — {s.style_name}</h2>
           <span className={`badge ${active ? 'green' : 'grey'}`}>{active ? 'Active' : s.product_status}</span>
           <span className="spacer" />
-          <button className="btn sm" onClick={() => navigate(`/styles/${s.style_id}`)}>✎ Edit Style</button>
-          <button className="btn sm" onClick={() => navigate(`/styles/${s.style_id}`)}>Manage ▾</button>
+          {!s.supplier_catalog && <button className="btn sm" onClick={() => navigate(`/styles/${s.style_id}`)}>✎ Edit Style</button>}
+          {!s.supplier_catalog && <button className="btn sm" onClick={() => navigate(`/styles/${s.style_id}`)}>Manage ▾</button>}
+          {s.supplier_catalog && <span className="badge blue">Live Supplier Catalog</span>}
         </div>
 
         <div className="pv-grid">
@@ -54,6 +55,8 @@ export default function StylePreview({ detail, loading }) {
             <Info k="Fabric" v={s.fabric_composition} />
             <Info k="Fabric Weight" v={s.fabric_weight_oz ? `${s.fabric_weight_oz} oz / ${s.fabric_weight_gsm ?? '—'} g` : null} />
             <Info k="Fabric Type" v={s.fabric_type} />
+            {s.supplier_catalog && <Info k="Original Name" v={s.raw_style_name} />}
+            {s.supplier_catalog && <Info k="Craft Types" v={String(s.craft_types || '').split(',').map((v) => v === '1' ? 'Heat Transfer' : v === '2' ? 'DTG' : v).join(', ')} />}
           </div>
 
           <div className="pv-block">
@@ -101,6 +104,7 @@ export default function StylePreview({ detail, loading }) {
             <Info k="Colors" v={String(s.colors.length)} />
             <Info k="Sizes" v={String(s.sizes.length)} />
             <Info k="Total SKUs" v={String(s.sizes.reduce((a, z) => a + (z.sku_count || 0), 0))} />
+            {s.supplier_catalog && <Info k="SKU Pattern" v={`${s.style_no}-COLOR-SIZE`} />}
           </div>
         </div>
       </div>
