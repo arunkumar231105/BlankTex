@@ -33,7 +33,7 @@ async function waitForDb(retries = 30) {
 async function init() {
   await waitForDb();
 
-  const { rows } = await query("SELECT to_regclass('public.styles') AS t");
+  const { rows } = await query("SELECT to_regclass('styles') AS t");
   if (!rows[0].t) {
     console.log('Schema missing — applying blanktex_schema.sql…');
     await query(readFileSync(SCHEMA_PATH, 'utf8'));
