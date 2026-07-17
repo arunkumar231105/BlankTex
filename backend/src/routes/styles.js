@@ -14,12 +14,42 @@ const WRITABLE = [
 
 // GET /api/styles?search=&category=&gender=&fit=&page=1&pageSize=7
 router.get('/', wrap(async (req, res) => {
-  const { search, category, gender, fit, supplier } = req.query;
+  const { search, category, gender, fit, supplier, visibility } = req.query;
   const page = Math.max(1, Number(req.query.page) || 1);
   const pageSize = Math.min(500, Math.max(1, Number(req.query.pageSize) || 7));
 
+  // A selected supplier is an explicit supplier-catalog view. Do not mix the
+  // manually managed BlankTex catalog with records synced from another source.
+  if (supplier) {
+    const params = [supplier];
+    const clauses = ['scs.supplier_id = $1', 'scs.active = TRUE', 'scs.enabled = TRUE'];
+    if (search) {
+      params.push(`%${search}%`);
+      clauses.push(`(scs.style_code ILIKE $${params.length} OR scs.style_name ILIKE $${params.length} OR scs.display_name ILIKE $${params.length})`);
+    }
+    const where = `WHERE ${clauses.join(' AND ')}`;
+    const total = (await query(`SELECT COUNT(*)::int n FROM supplier_catalog_styles scs ${where}`, params)).rows[0].n;
+    const listParams = [...params, pageSize, (page - 1) * pageSize];
+    const { rows } = await query(`
+      SELECT scs.supplier_style_id style_id,scs.style_code style_no,scs.display_name style_name,
+             scs.style_name short_name,'Supplier Catalog' garment_category,NULL::text gender,NULL::text fit_type,
+             'Active' product_status,TRUE active,FALSE discontinued,FALSE is_featured,
+             sup.supplier_id brand_id,sup.supplier_code brand_name,
+             COALESCE(scs.images->>0,'') primary_image,
+             ((SELECT COUNT(*) FROM supplier_catalog_colors c WHERE c.supplier_id=scs.supplier_id AND c.active) *
+              (SELECT COUNT(*) FROM supplier_catalog_sizes z WHERE z.supplier_id=scs.supplier_id AND z.active))::int sku_count,
+             TRUE supplier_catalog
+        FROM supplier_catalog_styles scs
+        JOIN suppliers sup ON sup.supplier_id=scs.supplier_id
+        ${where}
+       ORDER BY scs.display_name,scs.style_code
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`, listParams);
+    return res.json({ data: rows, page, pageSize, total, totalPages: Math.ceil(total / pageSize) || 1 });
+  }
+
   const p = [];
   const clauses = [];
+  if (visibility === 'dashboard') clauses.push('s.active=TRUE AND s.discontinued=FALSE');
   if (search) {
     p.push(`%${search}%`);
     clauses.push(`(s.style_no ILIKE $${p.length} OR s.style_name ILIKE $${p.length} OR b.brand_name ILIKE $${p.length})`);
@@ -67,8 +97,87 @@ router.get('/filters', wrap(async (_req, res) => {
   });
 }));
 
+// Synced supplier styles are managed separately from manually-created styles.
+// `enabled` is intentionally not overwritten by future supplier API syncs.
+router.get('/supplier-catalog/manage', wrap(async (req, res) => {
+  const params = [];
+  const clauses = ['scs.active=TRUE'];
+  if (req.query.supplier) { params.push(req.query.supplier); clauses.push(`scs.supplier_id=$${params.length}`); }
+  if (req.query.search) {
+    params.push(`%${req.query.search}%`);
+    clauses.push(`(scs.style_code ILIKE $${params.length} OR scs.display_name ILIKE $${params.length} OR scs.style_name ILIKE $${params.length})`);
+  }
+  const { rows } = await query(`
+    SELECT scs.supplier_style_id style_id,scs.supplier_id,scs.style_code style_no,
+           scs.display_name style_name,scs.style_name raw_name,scs.craft_types,scs.images,
+           scs.enabled,scs.last_synced_at,sup.supplier_name,sup.supplier_code
+      FROM supplier_catalog_styles scs
+      JOIN suppliers sup ON sup.supplier_id=scs.supplier_id
+     WHERE ${clauses.join(' AND ')}
+     ORDER BY sup.supplier_name,scs.display_name,scs.style_code`, params);
+  res.json(rows);
+}));
+
+router.put('/supplier-catalog/:id/status', wrap(async (req, res) => {
+  if (typeof req.body?.enabled !== 'boolean') return res.status(400).json({ error: 'enabled must be true or false' });
+  const { rows } = await query(`UPDATE supplier_catalog_styles SET enabled=$1 WHERE supplier_style_id=$2 RETURNING supplier_style_id style_id,enabled`, [req.body.enabled, req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Supplier style not found' });
+  res.json(rows[0]);
+}));
+
 // Full detail: style + brand + default supplier + colors + sizes(with specs)
 router.get('/:id', wrap(async (req, res) => {
+  const supplierStyle = (await query(`
+    SELECT scs.*,sup.supplier_name,sup.supplier_code,sup.website,sup.default_currency supplier_currency,
+           sup.lead_time_days supplier_lead_time,sup.minimum_order supplier_moq
+      FROM supplier_catalog_styles scs
+      JOIN suppliers sup ON sup.supplier_id=scs.supplier_id
+     WHERE scs.supplier_style_id=$1 AND scs.active=TRUE AND scs.enabled=TRUE`, [req.params.id])).rows[0];
+  if (supplierStyle) {
+    const [colors, sizes] = await Promise.all([
+      query(`SELECT c.supplier_color_id style_color_id,c.color_code supplier_color_code,
+                    c.color_code internal_color_code,c.display_name,c.color_name,
+                    COALESCE((SELECT hex_color FROM style_colors legacy
+                              WHERE legacy.hex_color IS NOT NULL AND (
+                                COALESCE(legacy.supplier_color_code,legacy.internal_color_code)=c.color_code OR
+                                LOWER(legacy.display_name)=LOWER(c.display_name) OR LOWER(legacy.color_name)=LOWER(c.color_name)
+                              ) ORDER BY (COALESCE(legacy.supplier_color_code,legacy.internal_color_code)=c.color_code) DESC LIMIT 1),'#d7dce5') hex_color,
+                    TRUE active,FALSE discontinued
+               FROM supplier_catalog_colors c
+              WHERE c.supplier_id=$1 AND c.active=TRUE ORDER BY c.display_name,c.color_code`, [supplierStyle.supplier_id]),
+      query(`SELECT z.supplier_size_id style_size_id,z.size_code,z.display_name size_name,
+                    TRUE active,FALSE discontinued,
+                    (SELECT COUNT(*)::int FROM supplier_catalog_colors c WHERE c.supplier_id=z.supplier_id AND c.active) sku_count
+               FROM supplier_catalog_sizes z
+              WHERE z.supplier_id=$1 AND z.active=TRUE ORDER BY z.display_name,z.size_code`, [supplierStyle.supplier_id]),
+    ]);
+    const images = (supplierStyle.images || []).slice(0, 1).map((imageUrl, index) => ({
+      style_image_id: `${supplierStyle.supplier_style_id}-${index}`,
+      image_url: imageUrl,
+      alt_text: supplierStyle.display_name,
+      is_primary: index === 0,
+    }));
+    return res.json({
+      style_id: supplierStyle.supplier_style_id,
+      supplier_catalog: true,
+      supplier_id: supplierStyle.supplier_id,
+      style_no: supplierStyle.style_code,
+      style_name: supplierStyle.display_name,
+      raw_style_name: supplierStyle.style_name,
+      short_name: supplierStyle.style_code,
+      garment_category: 'Supplier Catalog',
+      garment_type: supplierStyle.display_name,
+      craft_types: supplierStyle.craft_types,
+      price_mode: supplierStyle.price_mode,
+      product_status: 'Active', active: true, discontinued: false, is_featured: false,
+      brand_name: supplierStyle.supplier_code, brand_code: supplierStyle.supplier_code, brand_logo: null,
+      supplier_name: supplierStyle.supplier_name, supplier_code: supplierStyle.supplier_code,
+      supplier_lead_time: supplierStyle.supplier_lead_time, supplier_moq: supplierStyle.supplier_moq,
+      supplier_currency: supplierStyle.supplier_currency,
+      colors: colors.rows, sizes: sizes.rows, images,
+    });
+  }
+
   const styleRes = await query(
     `SELECT s.*, b.brand_name, b.brand_code, b.brand_logo,
             sup.supplier_name, sup.supplier_code, sup.lead_time_days AS supplier_lead_time,

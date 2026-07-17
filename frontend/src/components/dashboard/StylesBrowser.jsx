@@ -1,6 +1,6 @@
 const THUMB = { 'T-Shirt': '👕', Hoodie: '🧥', Sweatshirt: '👚', 'Tank Top': '🎽', Polo: '👔', Cap: '🧢' };
 
-export default function StylesBrowser({ filters, query, list, loading, error, selectedId, onSelect, onQuery }) {
+export default function StylesBrowser({ filters, query, list, loading, error, selectedId, onSelect, onQuery, supplierSelected }) {
   const { data, total, page, totalPages } = list;
 
   return (
@@ -12,7 +12,7 @@ export default function StylesBrowser({ filters, query, list, loading, error, se
         <input placeholder="Search styles…" value={query.search} onChange={(e) => onQuery({ search: e.target.value })} />
       </div>
 
-      <div className="b-filters">
+      {!supplierSelected && <div className="b-filters">
         <select value={query.category} onChange={(e) => onQuery({ category: e.target.value })}>
           <option value="">Category</option>
           {filters.categories.map((c) => <option key={c}>{c}</option>)}
@@ -25,7 +25,7 @@ export default function StylesBrowser({ filters, query, list, loading, error, se
           <option value="">Fit</option>
           {filters.fits.map((f) => <option key={f}>{f}</option>)}
         </select>
-      </div>
+      </div>}
 
       <div className="list-head"><span>Style No. / Name</span><span>SKUs</span></div>
 
@@ -35,7 +35,7 @@ export default function StylesBrowser({ filters, query, list, loading, error, se
 
       {data.map((s) => (
         <div key={s.style_id} className={`style-row${s.style_id === selectedId ? ' active' : ''}`} onClick={() => onSelect(s.style_id)}>
-          <div className="style-thumb">{THUMB[s.garment_category] || '👕'}</div>
+          <div className="style-thumb">{s.primary_image ? <img src={s.primary_image} alt="" /> : (THUMB[s.garment_category] || '👕')}</div>
           <div style={{ minWidth: 0 }}>
             <div className="sr-no">{s.style_no}</div>
             <div className="sr-name">{s.style_name}</div>

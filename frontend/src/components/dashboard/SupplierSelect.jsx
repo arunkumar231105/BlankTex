@@ -16,7 +16,7 @@ export default function SupplierSelect({ suppliers, value, onChange }) {
             Lead Time: {current.lead_time_days ?? '—'} days · Currency: {current.default_currency}<br />
             Payment: {current.payment_terms || '—'}
           </>
-        ) : 'Showing styles from all suppliers.'}
+        ) : 'Showing the managed BlankTex catalog. Select a supplier to load only its linked live styles.'}
       </div>
     </div>
   );

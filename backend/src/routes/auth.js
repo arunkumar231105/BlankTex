@@ -5,6 +5,7 @@ import {
   clearSessionCookie,
   createSession,
   deleteSession,
+  hashPassword,
   sessionTokenFromRequest,
   setSessionCookie,
   verifyPassword,
@@ -14,6 +15,40 @@ const router = Router();
 const attempts = new Map();
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
+
+router.post('/sso', async (req, res, next) => {
+  try {
+    const expected = String(process.env.SSO_SHARED_SECRET || '');
+    if (!expected || req.get('x-decoinks-sso-secret') !== expected) {
+      return res.status(403).json({ error: 'SSO unavailable' });
+    }
+    const username = String(req.get('x-authentik-username') || '').trim().toLowerCase();
+    if (!username) return res.status(401).json({ error: 'Missing SSO identity' });
+    const rawEmail = String(req.get('x-authentik-email') || '').trim().toLowerCase();
+    const email = rawEmail.includes('@') ? rawEmail : `${username}@decoinkssuite.com`;
+    const displayName = String(req.get('x-authentik-name') || '').trim() || username;
+    let { rows } = await query(
+      `SELECT user_id, email, display_name, role FROM admin_users
+       WHERE LOWER(email) = $1 AND active IS TRUE`,
+      [email],
+    );
+    if (!rows[0]) {
+      const passwordHash = await hashPassword((await import('node:crypto')).randomBytes(48).toString('base64url'));
+      ({ rows } = await query(
+        `INSERT INTO admin_users (email, password_hash, display_name, role, active)
+         VALUES ($1, $2, $3, 'admin', TRUE)
+         RETURNING user_id, email, display_name, role`,
+        [email, passwordHash, displayName],
+      ));
+    }
+    await query('DELETE FROM auth_sessions WHERE expires_at <= NOW()');
+    const { token, expiresAt } = await createSession(rows[0].user_id);
+    setSessionCookie(req, res, token, expiresAt);
+    return res.json({ user: rows[0] });
+  } catch (error) {
+    return next(error);
+  }
+});
 
 function attemptState(ip) {
   const now = Date.now();

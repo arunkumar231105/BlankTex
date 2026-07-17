@@ -3,6 +3,15 @@ import { api } from '../api';
 
 const AuthContext = createContext(null);
 
+function redirectToAuthentik() {
+  if (!window.location.hostname.endsWith('.decoinkssuite.com')) return false;
+  const returnTo = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+  window.location.replace(
+    `${window.location.origin}/outpost.goauthentik.io/start?rd=${encodeURIComponent(returnTo)}`,
+  );
+  return true;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,7 +21,12 @@ export function AuthProvider({ children }) {
       const result = await api.authMe();
       setUser(result.user);
     } catch {
-      setUser(null);
+      try {
+        const result = await api.sso();
+        setUser(result.user);
+      } catch {
+        if (!redirectToAuthentik()) setUser(null);
+      }
     } finally {
       setLoading(false);
     }

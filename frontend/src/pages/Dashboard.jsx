@@ -26,7 +26,7 @@ export default function Dashboard() {
   const loadList = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const res = await api.list('styles', { ...query, supplier });
+      const res = await api.list('styles', { ...query, supplier, visibility: 'dashboard' });
       setList(res);
       if (res.data.length && !res.data.some((s) => s.style_id === selectedId)) {
         setSelectedId(res.data[0].style_id);
@@ -53,12 +53,17 @@ export default function Dashboard() {
       <div className="dash-actions">
         <button className="btn" onClick={() => navigate('/styles')}>＋ Add New Style</button>
         <button className="btn primary" onClick={() => navigate('/styles')}>Manage Catalog</button>
-        <button className="btn" type="button" title="Purchase Order — coming soon">Purchase Order</button>
+        <button className="btn" type="button" onClick={() => navigate('/orders')}>Purchase Orders</button>
       </div>
 
       <div className="dash-grid">
         <div>
-          <SupplierSelect suppliers={suppliers} value={supplier} onChange={(v) => { setSupplier(v); patchQuery({ page: 1 }); }} />
+          <SupplierSelect suppliers={suppliers} value={supplier} onChange={(v) => {
+            setSupplier(v);
+            setQuery((current) => ({ ...current, category: '', gender: '', fit: '', page: 1 }));
+            setSelectedId(null);
+            setDetail(null);
+          }} />
           <div style={{ height: 16 }} />
           <StylesBrowser
             filters={filters}
@@ -69,6 +74,7 @@ export default function Dashboard() {
             selectedId={selectedId}
             onSelect={setSelectedId}
             onQuery={patchQuery}
+            supplierSelected={Boolean(supplier)}
           />
         </div>
         <StylePreview detail={detail} loading={loading} />

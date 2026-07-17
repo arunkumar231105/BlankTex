@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import ResourceManager from '../ui/ResourceManager.jsx';
 import ImportModal from '../ui/ImportModal.jsx';
-import { Badge } from '../lib/ui.jsx';
+import { useToast } from '../ui/Toast.jsx';
 
 const CATALOG_IMPORT = {
   entity: 'catalog',
@@ -19,31 +19,69 @@ import {
   GARMENT_CATEGORY, GENDER, FIT_TYPE, SLEEVE_TYPE, NECK_TYPE, FABRIC_TYPE, PRODUCT_STATUS,
 } from '../lib/enums.js';
 
-const columns = [
-  { key: 'style_no', label: 'Style No.', render: (r) => <b>{r.style_no}</b> },
-  { key: 'style_name', label: 'Name' },
-  { key: 'brand_name', label: 'Brand' },
-  { key: 'garment_category', label: 'Category' },
-  { key: 'gender', label: 'Gender' },
-  { key: 'sku_count', label: 'SKUs' },
-  { key: 'product_status', label: 'Status', render: (r) => <Badge value={r.product_status} /> },
-];
-
 export default function Styles() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [brands, setBrands] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
   const [error, setError] = useState(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [supplierId, setSupplierId] = useState('');
+  const [supplierStyles, setSupplierStyles] = useState([]);
+  const [supplierSearch, setSupplierSearch] = useState('');
+  const [statusBusy, setStatusBusy] = useState('');
 
   useEffect(() => {
     Promise.all([api.list('brands'), api.list('suppliers')])
-      .then(([b, s]) => { setBrands(b); setSuppliers(s); })
+      .then(([b, s]) => {
+        setBrands(b); setSuppliers(s);
+        const connected = s.find((supplier) => supplier.api_available);
+        if (connected) setSupplierId(connected.supplier_id);
+      })
       .catch((e) => setError(e.message));
   }, []);
 
+  useEffect(() => {
+    if (!supplierId) { setSupplierStyles([]); return; }
+    let current = true;
+    api.supplierCatalogStyles({ supplier: supplierId, search: supplierSearch })
+      .then((rows) => current && setSupplierStyles(rows))
+      .catch((e) => current && setError(e.message));
+    return () => { current = false; };
+  }, [supplierId, supplierSearch]);
+
   const load = useCallback(() => api.list('styles', { pageSize: 500 }).then((r) => r.data), []);
+
+  const setSupplierStatus = async (style, enabled) => {
+    setStatusBusy(style.style_id);
+    try {
+      await api.setSupplierStyleStatus(style.style_id, enabled);
+      setSupplierStyles((current) => current.map((row) => row.style_id === style.style_id ? { ...row, enabled } : row));
+      toast.success(`${style.style_no} is now ${enabled ? 'Active' : 'Inactive'}`);
+    } catch (e) { toast.error(e.message); }
+    finally { setStatusBusy(''); }
+  };
+
+  const setManagedStatus = async (style, active) => {
+    setStatusBusy(style.style_id);
+    try {
+      await api.update('styles', style.style_id, { active });
+      setRefreshKey((key) => key + 1);
+      toast.success(`${style.style_no} is now ${active ? 'Active' : 'Inactive'}`);
+    } catch (e) { toast.error(e.message); }
+    finally { setStatusBusy(''); }
+  };
+
+  const columns = [
+    { key: 'style_no', label: 'Style No.', render: (r) => <b>{r.style_no}</b> },
+    { key: 'style_name', label: 'Name' },
+    { key: 'brand_name', label: 'Brand' },
+    { key: 'garment_category', label: 'Category' },
+    { key: 'gender', label: 'Gender' },
+    { key: 'sku_count', label: 'SKUs' },
+    { key: 'active', label: 'Status', render: (r) => <select className={`inline-status ${r.active ? 'active' : 'inactive'}`} value={r.active ? 'active' : 'inactive'} disabled={statusBusy === r.style_id} onClick={(event) => event.stopPropagation()} onChange={(event) => setManagedStatus(r, event.target.value === 'active')}><option value="active">Active</option><option value="inactive">Inactive</option></select> },
+  ];
 
   if (error) return <div className="error-box">{error}</div>;
   if (!brands) return <div className="loading">Loading…</div>;
@@ -97,6 +135,28 @@ export default function Styles() {
           <div className="page-desc">Garment styles. Click a row to manage colors, sizes, size specs and SKUs.</div>
         </div>
       </div>
+      <div className="card supplier-styles-manager">
+        <div className="supplier-styles-head">
+          <div><h3>Supplier-linked Styles</h3><p>These synced styles control visibility on Dashboard and New Order.</p></div>
+          <select className="input" value={supplierId} onChange={(event) => setSupplierId(event.target.value)}>
+            <option value="">Select Supplier</option>
+            {suppliers.filter((supplier) => supplier.api_available).map((supplier) => <option key={supplier.supplier_id} value={supplier.supplier_id}>{supplier.supplier_code} — {supplier.supplier_name}</option>)}
+          </select>
+          <input className="input" placeholder="Search supplier styles…" value={supplierSearch} onChange={(event) => setSupplierSearch(event.target.value)} />
+        </div>
+        <div className="tbl-wrap supplier-styles-table"><table className="tbl"><thead><tr><th>Image</th><th>Style No.</th><th>Name</th><th>Supplier</th><th>Craft</th><th>Status</th></tr></thead><tbody>
+          {!supplierStyles.length && <tr><td colSpan="6"><div className="empty">No supplier styles found.</div></td></tr>}
+          {supplierStyles.map((style) => <tr key={style.style_id}>
+            <td>{style.images?.[0] ? <img className="supplier-style-thumb" src={style.images[0]} alt="" /> : '👕'}</td>
+            <td><b>{style.style_no}</b></td><td>{style.style_name}<small className="supplier-raw-name">{style.raw_name !== style.style_name ? style.raw_name : ''}</small></td>
+            <td>{style.supplier_code}</td><td>{String(style.craft_types || '').split(',').map((value) => value === '1' ? 'Heat Transfer' : value === '2' ? 'DTG' : value).join(', ') || '—'}</td>
+            <td><select className={`inline-status ${style.enabled ? 'active' : 'inactive'}`} value={style.enabled ? 'active' : 'inactive'} disabled={statusBusy === style.style_id} onChange={(event) => setSupplierStatus(style, event.target.value === 'active')}><option value="active">Active</option><option value="inactive">Inactive</option></select></td>
+          </tr>)}
+        </tbody></table></div>
+        <div className="supplier-styles-count">{supplierStyles.length} supplier styles · inactive styles are excluded from Dashboard and New Order</div>
+      </div>
+
+      <div className="managed-styles-title"><h3>Managed BlankTex Styles</h3><span>Manual catalog records</span></div>
       <ResourceManager
         title="Styles" singular="Style" resource="styles" idKey="style_id"
         columns={columns} fields={fields} load={load}

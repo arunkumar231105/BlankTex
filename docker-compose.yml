@@ -1,40 +1,28 @@
-# BlankTex full stack: PostgreSQL + Node API + Nginx (serves built React + proxies /api).
+# BlankTex full stack: central PostgreSQL + Node API + Nginx.
 # Deploy:  docker compose up -d --build
 # App is served on http://<server-ip>:${APP_PORT}  (default 8097)
 services:
-  db:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-blanktex}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (copy from .env.example)}
-      POSTGRES_DB: ${POSTGRES_DB:-blanktex}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-blanktex} -d ${POSTGRES_DB:-blanktex}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
     restart: unless-stopped
+    env_file:
+      - /root/decoinks/backend/.env
     environment:
-      PGHOST: db
-      PGPORT: 5432
-      PGUSER: ${POSTGRES_USER:-blanktex}
-      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (copy from .env.example)}
-      PGDATABASE: ${POSTGRES_DB:-blanktex}
+      DB_SCHEMA: blanktex
       PORT: 4000
       SCHEMA_PATH: /app/blanktex_schema.sql
       ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
-    depends_on:
-      db:
-        condition: service_healthy
+      UPLOAD_DIR: /app/uploads
+      SUPPLIER_CONFIG_PATH: /run/secrets/blanktex-supplier.json
+    volumes:
+      - purchase_uploads:/app/uploads
+      - /root/.blanktex_supplier_config.json:/run/secrets/blanktex-supplier.json:ro
+    networks:
+      - default
+      - decoinks_central
     # No host port mapping — the API is only reached internally via the frontend proxy.
     expose:
       - "4000"
@@ -49,4 +37,9 @@ services:
       - backend
 
 volumes:
-  pgdata:
+  purchase_uploads:
+
+networks:
+  decoinks_central:
+    external: true
+    name: decoinks_decoinks_net
