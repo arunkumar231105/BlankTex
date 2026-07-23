@@ -393,6 +393,42 @@ CREATE TRIGGER trg_style_decorations_updated
     BEFORE UPDATE ON style_decorations
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+-- =============================================================================
+-- 2.4d style_print_areas (size-specific DTF/DTG printable dimensions)
+-- Inch values are generated from the source centimetres to prevent drift.
+-- =============================================================================
+CREATE TABLE style_print_areas (
+    style_print_area_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    style_id            UUID NOT NULL REFERENCES styles (style_id) ON DELETE CASCADE,
+    style_size_id       UUID NOT NULL REFERENCES style_sizes (style_size_id) ON DELETE CASCADE,
+    process_type        VARCHAR(10) NOT NULL CHECK (process_type IN ('DTF','DTG')),
+    placement           VARCHAR(30) NOT NULL CHECK (placement IN ('Front','Back','Front and Back')),
+    same_for_front_back BOOLEAN NOT NULL DEFAULT FALSE,
+    max_width_cm        DECIMAL(8,2) NOT NULL CHECK (max_width_cm > 0),
+    max_height_cm       DECIMAL(8,2) NOT NULL CHECK (max_height_cm > 0),
+    max_width_in        DECIMAL(8,2) GENERATED ALWAYS AS (ROUND(max_width_cm / 2.54, 2)) STORED,
+    max_height_in       DECIMAL(8,2) GENERATED ALWAYS AS (ROUND(max_height_cm / 2.54, 2)) STORED,
+    scale_percent       DECIMAL(6,2) NOT NULL CHECK (scale_percent > 0 AND scale_percent <= 100),
+    actual_width_cm     DECIMAL(8,2) NOT NULL CHECK (actual_width_cm > 0),
+    actual_height_cm    DECIMAL(8,2) NOT NULL CHECK (actual_height_cm > 0),
+    actual_width_in     DECIMAL(8,2) GENERATED ALWAYS AS (ROUND(actual_width_cm / 2.54, 2)) STORED,
+    actual_height_in    DECIMAL(8,2) GENERATED ALWAYS AS (ROUND(actual_height_cm / 2.54, 2)) STORED,
+    source_size_code    VARCHAR(30) NOT NULL,
+    source_product_name VARCHAR(250),
+    source_name         VARCHAR(150) NOT NULL,
+    source_sheet        VARCHAR(80),
+    source_row          INTEGER,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_style_print_area UNIQUE (style_id, style_size_id, process_type, placement)
+);
+
+CREATE INDEX ix_style_print_areas_style ON style_print_areas (style_id, process_type);
+CREATE INDEX ix_style_print_areas_size ON style_print_areas (style_size_id);
+CREATE TRIGGER trg_style_print_areas_updated
+    BEFORE UPDATE ON style_print_areas
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 
 -- =============================================================================
 -- 2.5  style_color_sizes   (SKU master: Style + Color + Size)
