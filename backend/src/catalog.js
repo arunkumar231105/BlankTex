@@ -17,7 +17,7 @@ async function insertOne(client, sql, params) {
 
 async function clearCatalog(client) {
   await client.query(`TRUNCATE
-    supplier_sku_prices, style_color_sizes, style_decorations, style_size_specs,
+    supplier_sku_prices, style_color_sizes, style_print_areas, style_decorations, style_size_specs,
     style_sizes, style_colors, style_images, styles, brands, manufacturers,
     supplier_warehouses, supplier_contacts, suppliers, catalog_meta
     RESTART IDENTITY CASCADE`);

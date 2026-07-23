@@ -64,6 +64,9 @@ export const api = {
   pricesBySku: (id) => request(`/prices/by-sku/${id}`),
   imagesByStyle: (id) => request(`/images/by-style/${id}`),
   decorationsByStyle: (id) => request(`/decorations/by-style/${id}`),
+  printAreasByStyle: (id, processType) => request(
+    `/decorations/print-areas/by-style/${id}${qs({ process_type: processType })}`,
+  ),
   purchaseCatalog: () => request('/purchases/catalog'),
   syncPurchaseCatalog: (supplierId) => request('/purchases/catalog/sync', { method: 'POST', body: { supplier_id: supplierId } }),
   createPurchase: (body) => request('/purchases', { method: 'POST', body }),
