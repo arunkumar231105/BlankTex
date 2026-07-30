@@ -15,26 +15,31 @@ export default function StylesBrowser({ filters, query, list, loading, error, se
       </div>
 
       <div className="b-filters">
-        <select value={query.brand} onChange={(e) => onQuery({ brand: e.target.value })}>
-          <option value="">All Brands</option>
-          {brandOptions.map((b) => <option key={b}>{b}</option>)}
-        </select>
+        {brandOptions.length > 0 && (
+          <select value={query.brand} onChange={(e) => onQuery({ brand: e.target.value })}>
+            <option value="">All Brands</option>
+            {brandOptions.map((b) => <option key={b}>{b}</option>)}
+          </select>
+        )}
+        {filters.categories.length > 0 && (
+          <select value={query.category} onChange={(e) => onQuery({ category: e.target.value })}>
+            <option value="">Category</option>
+            {filters.categories.map((c) => <option key={c}>{c}</option>)}
+          </select>
+        )}
+        {filters.genders.length > 0 && (
+          <select value={query.gender} onChange={(e) => onQuery({ gender: e.target.value })}>
+            <option value="">Gender</option>
+            {filters.genders.map((g) => <option key={g}>{g}</option>)}
+          </select>
+        )}
+        {filters.fits.length > 0 && (
+          <select value={query.fit} onChange={(e) => onQuery({ fit: e.target.value })}>
+            <option value="">Fit</option>
+            {filters.fits.map((f) => <option key={f}>{f}</option>)}
+          </select>
+        )}
       </div>
-
-      {!supplierSelected && <div className="b-filters">
-        <select value={query.category} onChange={(e) => onQuery({ category: e.target.value })}>
-          <option value="">Category</option>
-          {filters.categories.map((c) => <option key={c}>{c}</option>)}
-        </select>
-        <select value={query.gender} onChange={(e) => onQuery({ gender: e.target.value })}>
-          <option value="">Gender</option>
-          {filters.genders.map((g) => <option key={g}>{g}</option>)}
-        </select>
-        <select value={query.fit} onChange={(e) => onQuery({ fit: e.target.value })}>
-          <option value="">Fit</option>
-          {filters.fits.map((f) => <option key={f}>{f}</option>)}
-        </select>
-      </div>}
 
       <div className="list-head"><span>Style No. / Name</span><span>SKUs</span></div>
 

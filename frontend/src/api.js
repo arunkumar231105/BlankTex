@@ -47,7 +47,7 @@ export const api = {
 
   // specific
   dashboardStats: () => request('/dashboard/stats'),
-  styleFilters: () => request('/styles/filters'),
+  styleFilters: (params) => request(`/styles/filters${qs(params || {})}`),
   styleDetail: (id) => request(`/styles/${id}`),
   supplierCatalogStyles: (params) => request(`/styles/supplier-catalog/manage${qs(params)}`),
   setSupplierStyleStatus: (id, enabled) => request(`/styles/supplier-catalog/${id}/status`, { method: 'PUT', body: { enabled } }),

@@ -43,6 +43,15 @@ function num(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function deriveGender(title) {
+  const t = String(title || '').toLowerCase();
+  if (/women|ladies|maternity/.test(t)) return 'Women';
+  if (/youth|boys|girls/.test(t)) return 'Youth';
+  if (/toddler|infant|baby|onesie/.test(t)) return 'Toddler';
+  if (/men|unisex/.test(t)) return 'Men/Unisex';
+  return 'Unisex';
+}
+
 async function getSupplierId() {
   const r = await pool.query("SELECT supplier_id FROM suppliers WHERE supplier_code = 'SSA'");
   if (!r.rows[0]) throw new Error("S&S supplier row missing — deploy the migration (init.js) first.");
@@ -123,17 +132,17 @@ async function importStyle(client, supplierId, style) {
   const styleRow = await client.query(
     `INSERT INTO ss_styles
        (supplier_id, ss_style_ref, style_code, part_number, title, brand_name, category,
-        description, fabric, images, active, enabled, last_synced_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE,TRUE,NOW())
+        description, fabric, images, gender, active, enabled, last_synced_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,TRUE,TRUE,NOW())
      ON CONFLICT (supplier_id, ss_style_ref) DO UPDATE SET
        style_code=EXCLUDED.style_code, part_number=EXCLUDED.part_number, title=EXCLUDED.title,
        brand_name=EXCLUDED.brand_name, category=EXCLUDED.category, description=EXCLUDED.description,
-       fabric=EXCLUDED.fabric, images=EXCLUDED.images, active=TRUE, last_synced_at=NOW()
+       fabric=EXCLUDED.fabric, images=EXCLUDED.images, gender=EXCLUDED.gender, active=TRUE, last_synced_at=NOW()
      RETURNING ss_style_id`,
     [supplierId, String(style.styleID), style.styleName, style.partNumber || null,
      style.title || style.styleName, style.brandName, style.baseCategory || null,
      descText.slice(0, 4000) || null, (descText.split('. ')[0] || '').slice(0, 240) || null,
-     JSON.stringify(images)],
+     JSON.stringify(images), deriveGender(style.title || style.styleName)],
   );
   const ssStyleId = styleRow.rows[0].ss_style_id;
 

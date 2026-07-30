@@ -31,6 +31,8 @@ router.get('/', wrap(async (req, res) => {
       const p2 = [supplier];
       const cl = ['ss.supplier_id = $1', 'ss.active', 'ss.enabled'];
       if (brand) { p2.push(brand); cl.push(`ss.brand_name = $${p2.length}`); }
+      if (category) { p2.push(category); cl.push(`ss.category = $${p2.length}`); }
+      if (gender) { p2.push(gender); cl.push(`ss.gender = $${p2.length}`); }
       if (search) {
         p2.push(`%${search}%`);
         cl.push(`(ss.style_code ILIKE $${p2.length} OR ss.title ILIKE $${p2.length} OR ss.brand_name ILIKE $${p2.length})`);
@@ -118,7 +120,24 @@ router.get('/', wrap(async (req, res) => {
 }));
 
 // Distinct filter values for dropdowns
-router.get('/filters', wrap(async (_req, res) => {
+router.get('/filters', wrap(async (req, res) => {
+  const supplier = req.query.supplier;
+  // Supplier-scoped filter options so the dropdowns match the styles shown.
+  if (supplier) {
+    const ssN = (await query('SELECT COUNT(*)::int n FROM ss_styles WHERE supplier_id=$1 AND active AND enabled', [supplier])).rows[0].n;
+    if (ssN > 0) {
+      const [cat, gen, brd] = await Promise.all([
+        query(`SELECT DISTINCT category v FROM ss_styles WHERE supplier_id=$1 AND active AND enabled AND category IS NOT NULL ORDER BY 1`, [supplier]),
+        query(`SELECT DISTINCT gender v FROM ss_styles WHERE supplier_id=$1 AND active AND enabled AND gender IS NOT NULL ORDER BY 1`, [supplier]),
+        query(`SELECT DISTINCT brand_name v FROM ss_styles WHERE supplier_id=$1 AND active AND enabled ORDER BY 1`, [supplier]),
+      ]);
+      // S&S has no structured "fit" field; gender is derived from the title.
+      return res.json({ categories: cat.rows.map((r) => r.v), genders: gen.rows.map((r) => r.v), fits: [], brands: brd.rows.map((r) => r.v) });
+    }
+    // Other supplier catalogs (e.g. RIIN) carry no brand/category taxonomy.
+    return res.json({ categories: [], genders: [], fits: [], brands: [] });
+  }
+
   const [cat, gen, fit, brd] = await Promise.all([
     query(`SELECT DISTINCT garment_category v FROM styles ORDER BY 1`),
     query(`SELECT DISTINCT gender v FROM styles ORDER BY 1`),

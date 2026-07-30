@@ -296,6 +296,16 @@ async function migrate() {
     );
     CREATE INDEX IF NOT EXISTS ix_ss_skus_style ON ss_style_skus(ss_style_id);
 
+    -- Derive a gender bucket from the product title (S&S has no structured gender field).
+    ALTER TABLE ss_styles ADD COLUMN IF NOT EXISTS gender VARCHAR(20);
+    UPDATE ss_styles SET gender = CASE
+        WHEN title ILIKE '%women%' OR title ILIKE '%ladies%' OR title ILIKE '%maternity%' THEN 'Women'
+        WHEN title ILIKE '%youth%' OR title ILIKE '%boys%' OR title ILIKE '%girls%' THEN 'Youth'
+        WHEN title ILIKE '%toddler%' OR title ILIKE '%infant%' OR title ILIKE '%baby%' OR title ILIKE '%onesie%' THEN 'Toddler'
+        WHEN title ILIKE '%men%' OR title ILIKE '%unisex%' THEN 'Men/Unisex'
+        ELSE 'Unisex' END
+      WHERE gender IS NULL;
+
     CREATE TABLE IF NOT EXISTS purchase_items (
       purchase_item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       purchase_id UUID NOT NULL REFERENCES purchases (purchase_id) ON DELETE CASCADE,
