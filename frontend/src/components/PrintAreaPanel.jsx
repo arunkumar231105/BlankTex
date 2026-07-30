@@ -21,29 +21,76 @@ function placementLabel(row) {
   return row.placement;
 }
 
-const METHODS = [
-  { key: 'DTF', label: 'Direct to Film' },
-  { key: 'DTG', label: 'Direct to Garment' },
-];
+export default function PrintAreaPanel({ styleId }) {
+  const [processType, setProcessType] = useState('DTF');
+  const [printAreas, setPrintAreas] = useState([]);
+  const [loadingAreas, setLoadingAreas] = useState(true);
+  const [areaError, setAreaError] = useState('');
 
-function ProcessColumn({ method, label, rows }) {
+  useEffect(() => {
+    let active = true;
+    setLoadingAreas(true);
+    setAreaError('');
+    api.printAreasByStyle(styleId)
+      .then((rows) => {
+        if (!active) return;
+        setPrintAreas(rows);
+        setProcessType(rows.some((row) => row.process_type === 'DTF') ? 'DTF' : (rows[0]?.process_type || 'DTF'));
+      })
+      .catch((error) => active && setAreaError(error.message))
+      .finally(() => active && setLoadingAreas(false));
+    return () => { active = false; };
+  }, [styleId]);
+
+  const visibleAreas = useMemo(
+    () => printAreas.filter((row) => row.process_type === processType),
+    [printAreas, processType],
+  );
+  const methodCounts = useMemo(() => printAreas.reduce((counts, row) => {
+    counts[row.process_type] = (counts[row.process_type] || 0) + 1;
+    return counts;
+  }, {}), [printAreas]);
+
   return (
-    <div className="process-column">
-      <div className="print-method-note">
-        <span className={`method-badge ${method.toLowerCase()}`}>{method}</span>
+    <section className="card print-area-card">
+      <div className="card-head print-area-head">
         <div>
-          <strong>{label}</strong>
-          <span>Source measurements are in centimetres. Inches are calculated at 1 in = 2.54 cm.</span>
+          <h3>DTF / DTG Print Areas</h3>
+          <p>Size-specific maximum artwork dimensions.</p>
         </div>
-        <span className="method-count">{rows.length}</span>
+        <div className="process-filter" role="group" aria-label="Filter print areas by method">
+          {['DTF', 'DTG'].map((method) => (
+            <button
+              key={method}
+              type="button"
+              className={processType === method ? 'active' : ''}
+              onClick={() => setProcessType(method)}
+              aria-pressed={processType === method}
+            >
+              {method}
+              <span>{methodCounts[method] || 0}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {rows.length === 0 ? (
+      <div className="print-method-note">
+        <span className={`method-badge ${processType.toLowerCase()}`}>{processType}</span>
+        <div>
+          <strong>{processType === 'DTF' ? 'Direct to Film' : 'Direct to Garment'}</strong>
+          <span>Source measurements are in centimetres. Inches are calculated at 1 in = 2.54 cm.</span>
+        </div>
+      </div>
+
+      {loadingAreas && <div className="loading">Loading print areas…</div>}
+      {areaError && <div className="error-box print-area-error">{areaError}</div>}
+      {!loadingAreas && !areaError && visibleAreas.length === 0 && (
         <div className="empty print-area-empty">
           <div className="big">▧</div>
-          No {method} print-area data is supplied for this style.
+          No {processType} print-area data is supplied for this style.
         </div>
-      ) : (
+      )}
+      {!loadingAreas && visibleAreas.length > 0 && (
         <div className="tbl-wrap">
           <table className="tbl print-area-table">
             <thead>
@@ -51,11 +98,11 @@ function ProcessColumn({ method, label, rows }) {
                 <th>Size</th>
                 <th>Placement</th>
                 <th>Maximum Print Area</th>
-                <th>Actual Scaled Size</th>
+                <th>Scale</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {visibleAreas.map((row) => (
                 <tr key={row.style_print_area_id}>
                   <td>
                     <div className="print-size">{row.source_size_code}</div>
@@ -72,65 +119,11 @@ function ProcessColumn({ method, label, rows }) {
                       heightIn={row.max_height_in}
                     />
                   </td>
-                  <td>
-                    <AreaValue
-                      widthCm={row.actual_width_cm}
-                      heightCm={row.actual_height_cm}
-                      widthIn={row.actual_width_in}
-                      heightIn={row.actual_height_in}
-                    />
-                  </td>
+                  <td><span className="scale-value">{round1(row.scale_percent)}%</span></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function PrintAreaPanel({ styleId }) {
-  const [printAreas, setPrintAreas] = useState([]);
-  const [loadingAreas, setLoadingAreas] = useState(true);
-  const [areaError, setAreaError] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    setLoadingAreas(true);
-    setAreaError('');
-    api.printAreasByStyle(styleId)
-      .then((rows) => { if (active) setPrintAreas(rows); })
-      .catch((error) => active && setAreaError(error.message))
-      .finally(() => active && setLoadingAreas(false));
-    return () => { active = false; };
-  }, [styleId]);
-
-  const byMethod = useMemo(() => {
-    const groups = { DTF: [], DTG: [] };
-    printAreas.forEach((row) => {
-      if (!groups[row.process_type]) groups[row.process_type] = [];
-      groups[row.process_type].push(row);
-    });
-    return groups;
-  }, [printAreas]);
-
-  return (
-    <section className="card print-area-card">
-      <div className="card-head print-area-head">
-        <div>
-          <h3>DTF / DTG Print Areas</h3>
-          <p>Size-specific maximum and scaled artwork dimensions.</p>
-        </div>
-      </div>
-
-      {loadingAreas && <div className="loading">Loading print areas…</div>}
-      {areaError && <div className="error-box print-area-error">{areaError}</div>}
-      {!loadingAreas && !areaError && (
-        <div className="process-grid">
-          {METHODS.map(({ key, label }) => (
-            <ProcessColumn key={key} method={key} label={label} rows={byMethod[key] || []} />
-          ))}
         </div>
       )}
     </section>
