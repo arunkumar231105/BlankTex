@@ -7,11 +7,11 @@ function round1(value) {
   return String(Math.round(number * 10) / 10);
 }
 
-function AreaValue({ widthCm, heightCm, widthIn, heightIn }) {
+function DimCell({ valueIn, valueCm }) {
   return (
     <div className="print-dimension">
-      <strong>{round1(widthIn)} × {round1(heightIn)} in</strong>
-      <span>{round1(widthCm)} × {round1(heightCm)} cm</span>
+      <strong>{round1(valueIn)} in</strong>
+      <span>{round1(valueCm)} cm</span>
     </div>
   );
 }
@@ -93,12 +93,23 @@ export default function PrintAreaPanel({ styleId }) {
       {!loadingAreas && visibleAreas.length > 0 && (
         <div className="tbl-wrap">
           <table className="tbl print-area-table">
+            <colgroup>
+              <col className="col-size" />
+              <col className="col-place" />
+              <col className="col-dim" />
+              <col className="col-dim" />
+              <col className="col-scale" />
+            </colgroup>
             <thead>
               <tr>
-                <th>Size</th>
-                <th>Placement</th>
-                <th>Maximum Print Area</th>
-                <th>Scale</th>
+                <th rowSpan={2}>Size</th>
+                <th rowSpan={2}>Placement</th>
+                <th colSpan={2} className="col-group">Maximum Print Area</th>
+                <th rowSpan={2} className="col-center">Scale</th>
+              </tr>
+              <tr>
+                <th className="col-center col-sub">Width</th>
+                <th className="col-center col-sub">Height</th>
               </tr>
             </thead>
             <tbody>
@@ -111,15 +122,9 @@ export default function PrintAreaPanel({ styleId }) {
                     )}
                   </td>
                   <td><span className="placement-badge">{placementLabel(row)}</span></td>
-                  <td>
-                    <AreaValue
-                      widthCm={row.max_width_cm}
-                      heightCm={row.max_height_cm}
-                      widthIn={row.max_width_in}
-                      heightIn={row.max_height_in}
-                    />
-                  </td>
-                  <td><span className="scale-value">{round1(row.scale_percent)}%</span></td>
+                  <td className="dim-cell"><DimCell valueIn={row.max_width_in} valueCm={row.max_width_cm} /></td>
+                  <td className="dim-cell"><DimCell valueIn={row.max_height_in} valueCm={row.max_height_cm} /></td>
+                  <td className="scale-cell"><span className="scale-value">{round1(row.scale_percent)}%</span></td>
                 </tr>
               ))}
             </tbody>
