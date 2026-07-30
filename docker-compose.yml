@@ -8,6 +8,8 @@ services:
       dockerfile: backend/Dockerfile
     restart: unless-stopped
     env_file:
+      # Shared suite SSO secret used to validate Authentik identity headers.
+      - /root/decoinks/.env
       - /root/decoinks/backend/.env
     environment:
       DB_SCHEMA: blanktex
@@ -15,6 +17,7 @@ services:
       SCHEMA_PATH: /app/blanktex_schema.sql
       ADMIN_EMAIL: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      SSO_SHARED_SECRET: ${SSO_SHARED_SECRET:?Set SSO_SHARED_SECRET in .env}
       UPLOAD_DIR: /app/uploads
       SUPPLIER_CONFIG_PATH: /run/secrets/blanktex-supplier.json
     volumes:

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ColorizedProductImage from './ColorizedProductImage';
+import PrintAreaPanel from '../PrintAreaPanel.jsx';
 
 const CAT_EMOJI = { 'T-Shirt': '👕', Hoodie: '🧥', Sweatshirt: '👚', 'Tank Top': '🎽', Polo: '👔', Cap: '🧢' };
 
@@ -108,6 +109,10 @@ export default function StylePreview({ detail, loading }) {
           </div>
         </div>
       </div>
+
+      <div style={{ height: 16 }} />
+
+      <PrintAreaPanel styleId={s.style_id} />
 
       <div style={{ height: 16 }} />
 

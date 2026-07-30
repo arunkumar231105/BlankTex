@@ -2,9 +2,18 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { api } from '../api';
 
 const AuthContext = createContext(null);
+const SSO_REDIRECT_KEY = 'blanktex_sso_redirect_started_at';
+
+function clearSsoRedirectGuard() {
+  window.sessionStorage.removeItem(SSO_REDIRECT_KEY);
+}
 
 function redirectToAuthentik() {
   if (!window.location.hostname.endsWith('.decoinkssuite.com')) return false;
+  const lastRedirect = Number(window.sessionStorage.getItem(SSO_REDIRECT_KEY) || 0);
+  if (lastRedirect && Date.now() - lastRedirect < 60_000) return false;
+
+  window.sessionStorage.setItem(SSO_REDIRECT_KEY, String(Date.now()));
   const returnTo = `${window.location.origin}${window.location.pathname}${window.location.search}`;
   window.location.replace(
     `${window.location.origin}/outpost.goauthentik.io/start?rd=${encodeURIComponent(returnTo)}`,
@@ -23,6 +32,7 @@ export function AuthProvider({ children }) {
     } catch {
       try {
         const result = await api.sso();
+        clearSsoRedirectGuard();
         setUser(result.user);
       } catch {
         if (!redirectToAuthentik()) setUser(null);
@@ -41,6 +51,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const result = await api.login(email, password);
+    clearSsoRedirectGuard();
     setUser(result.user);
     return result.user;
   };
