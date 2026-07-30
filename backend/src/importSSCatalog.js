@@ -49,6 +49,24 @@ async function getSupplierId() {
   return r.rows[0].supplier_id;
 }
 
+function brandCode(name) {
+  return String(name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20) || 'BRAND';
+}
+
+// Register each imported brand in the shared brands table, linked to the S&S
+// supplier, so it appears on the Brands page. Existing brands (e.g. Gildan) are
+// only linked to the supplier; their other fields are left untouched.
+async function upsertBrands(supplierId, brandNames) {
+  for (const name of brandNames) {
+    await pool.query(
+      `INSERT INTO brands (brand_code, brand_name, default_size_system, default_currency, status, supplier_id, remarks)
+       VALUES ($1,$2,'Adult','USD','Active',$3,'Imported from S&S Activewear')
+       ON CONFLICT (brand_name) DO UPDATE SET supplier_id = EXCLUDED.supplier_id`,
+      [brandCode(name), name, supplierId],
+    );
+  }
+}
+
 async function importStyle(client, supplierId, style) {
   const products = await ssGet(`/products/?style=${style.styleID}`);
   if (!Array.isArray(products)) throw new Error('Unexpected products payload');
@@ -162,6 +180,9 @@ async function main() {
   const supplierId = await getSupplierId();
   const allStyles = await ssGet('/styles/');
   const target = allStyles.filter((s) => brands.includes(s.brandName));
+
+  // Register the brands up front so the Brands page reflects them immediately.
+  await upsertBrands(supplierId, [...new Set(target.map((s) => s.brandName))]);
   const existing = new Set(
     (await pool.query('SELECT ss_style_ref FROM ss_styles WHERE supplier_id = $1', [supplierId]))
       .rows.map((r) => r.ss_style_ref),

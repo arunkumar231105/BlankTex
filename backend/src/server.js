@@ -21,6 +21,7 @@ import decorations from './routes/decorations.js';
 import auth from './routes/auth.js';
 import purchases from './routes/purchases.js';
 import { authRequired } from './auth.js';
+import { startStockScheduler } from './scheduler.js';
 
 const app = express();
 app.use(cors());
@@ -70,4 +71,7 @@ app.use((err, _req, res, _next) => {
 });
 
 const PORT = Number(process.env.PORT) || 4000;
-app.listen(PORT, () => console.log(`BlankTex API listening on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`BlankTex API listening on http://localhost:${PORT}`);
+  startStockScheduler();
+});

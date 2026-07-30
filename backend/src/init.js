@@ -88,6 +88,9 @@ async function migrate() {
     ALTER TABLE brands ADD COLUMN IF NOT EXISTS manufacturer_id UUID
       REFERENCES manufacturers (manufacturer_id) ON DELETE SET NULL;
     CREATE INDEX IF NOT EXISTS ix_brands_manufacturer ON brands (manufacturer_id);
+    ALTER TABLE brands ADD COLUMN IF NOT EXISTS supplier_id UUID
+      REFERENCES suppliers (supplier_id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS ix_brands_supplier ON brands (supplier_id);
 
     ALTER TABLE styles ALTER COLUMN gender DROP NOT NULL;
     ALTER TABLE style_size_specs ADD COLUMN IF NOT EXISTS chest_circumference DECIMAL(6,2);

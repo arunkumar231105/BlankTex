@@ -132,6 +132,27 @@ router.get('/filters', wrap(async (_req, res) => {
 // Synced supplier styles are managed separately from manually-created styles.
 // `enabled` is intentionally not overwritten by future supplier API syncs.
 router.get('/supplier-catalog/manage', wrap(async (req, res) => {
+  // S&S per-style catalog manager view.
+  if (req.query.supplier) {
+    const ssN = (await query('SELECT COUNT(*)::int n FROM ss_styles WHERE supplier_id=$1 AND active', [req.query.supplier])).rows[0].n;
+    if (ssN > 0) {
+      const p = [req.query.supplier];
+      const cl = ['ss.supplier_id=$1', 'ss.active'];
+      if (req.query.search) {
+        p.push(`%${req.query.search}%`);
+        cl.push(`(ss.style_code ILIKE $${p.length} OR ss.title ILIKE $${p.length} OR ss.brand_name ILIKE $${p.length})`);
+      }
+      const { rows } = await query(`
+        SELECT ss.ss_style_id style_id, ss.supplier_id, ss.style_code style_no,
+               ss.title style_name, ss.title raw_name, ss.brand_name,
+               NULL::text craft_types, ss.images, ss.enabled, ss.last_synced_at,
+               sup.supplier_name, sup.supplier_code
+          FROM ss_styles ss JOIN suppliers sup ON sup.supplier_id=ss.supplier_id
+         WHERE ${cl.join(' AND ')}
+         ORDER BY ss.brand_name, ss.style_code`, p);
+      return res.json(rows);
+    }
+  }
   const params = [];
   const clauses = ['scs.active=TRUE'];
   if (req.query.supplier) { params.push(req.query.supplier); clauses.push(`scs.supplier_id=$${params.length}`); }
@@ -152,6 +173,9 @@ router.get('/supplier-catalog/manage', wrap(async (req, res) => {
 
 router.put('/supplier-catalog/:id/status', wrap(async (req, res) => {
   if (typeof req.body?.enabled !== 'boolean') return res.status(400).json({ error: 'enabled must be true or false' });
+  // Try the S&S per-style catalog first, then the shared supplier catalog.
+  const ss = await query('UPDATE ss_styles SET enabled=$1 WHERE ss_style_id=$2 RETURNING ss_style_id style_id, enabled', [req.body.enabled, req.params.id]);
+  if (ss.rows.length) return res.json(ss.rows[0]);
   const { rows } = await query(`UPDATE supplier_catalog_styles SET enabled=$1 WHERE supplier_style_id=$2 RETURNING supplier_style_id style_id,enabled`, [req.body.enabled, req.params.id]);
   if (!rows.length) return res.status(404).json({ error: 'Supplier style not found' });
   res.json(rows[0]);

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import ResourceManager from '../ui/ResourceManager.jsx';
 import ImportModal from '../ui/ImportModal.jsx';
+import SmartThumb from '../components/SmartThumb.jsx';
 import { useToast } from '../ui/Toast.jsx';
 
 const CATALOG_IMPORT = {
@@ -147,7 +148,7 @@ export default function Styles() {
         <div className="tbl-wrap supplier-styles-table"><table className="tbl"><thead><tr><th>Image</th><th>Style No.</th><th>Name</th><th>Supplier</th><th>Craft</th><th>Status</th></tr></thead><tbody>
           {!supplierStyles.length && <tr><td colSpan="6"><div className="empty">No supplier styles found.</div></td></tr>}
           {supplierStyles.map((style) => <tr key={style.style_id}>
-            <td>{style.images?.[0] ? <img className="supplier-style-thumb" src={style.images[0]} alt="" /> : '👕'}</td>
+            <td><SmartThumb className="supplier-style-thumb" src={style.images?.[0]} /></td>
             <td><b>{style.style_no}</b></td><td>{style.style_name}<small className="supplier-raw-name">{style.raw_name !== style.style_name ? style.raw_name : ''}</small></td>
             <td>{style.supplier_code}</td><td>{String(style.craft_types || '').split(',').map((value) => value === '1' ? 'Heat Transfer' : value === '2' ? 'DTG' : value).join(', ') || '—'}</td>
             <td><select className={`inline-status ${style.enabled ? 'active' : 'inactive'}`} value={style.enabled ? 'active' : 'inactive'} disabled={statusBusy === style.style_id} onChange={(event) => setSupplierStatus(style, event.target.value === 'active')}><option value="active">Active</option><option value="inactive">Inactive</option></select></td>

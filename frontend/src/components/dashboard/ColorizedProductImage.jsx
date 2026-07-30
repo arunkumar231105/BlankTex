@@ -104,7 +104,9 @@ export default function ColorizedProductImage({ src, color, alt }) {
     };
   }, [src, color]);
 
-  if (failed) return <img className="pv-hero-img" src={src} alt={alt} />;
+  // Some supplier CDNs block cross-site hotlinking; show a clean garment
+  // placeholder instead of a broken image icon.
+  if (failed) return <div className="pv-hero-fallback" role="img" aria-label={alt}>👕</div>;
 
   return (
     <canvas

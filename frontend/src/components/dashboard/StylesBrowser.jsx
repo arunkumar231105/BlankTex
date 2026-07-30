@@ -1,3 +1,5 @@
+import SmartThumb from '../SmartThumb.jsx';
+
 const THUMB = { 'T-Shirt': '👕', Hoodie: '🧥', Sweatshirt: '👚', 'Tank Top': '🎽', Polo: '👔', Cap: '🧢' };
 
 export default function StylesBrowser({ filters, query, list, loading, error, selectedId, onSelect, onQuery, supplierSelected }) {
@@ -35,7 +37,7 @@ export default function StylesBrowser({ filters, query, list, loading, error, se
 
       {data.map((s) => (
         <div key={s.style_id} className={`style-row${s.style_id === selectedId ? ' active' : ''}`} onClick={() => onSelect(s.style_id)}>
-          <div className="style-thumb">{s.primary_image ? <img src={s.primary_image} alt="" /> : (THUMB[s.garment_category] || '👕')}</div>
+          <div className="style-thumb"><SmartThumb src={s.primary_image} fallback={THUMB[s.garment_category] || '👕'} /></div>
           <div style={{ minWidth: 0 }}>
             <div className="sr-no">{s.style_no}</div>
             <div className="sr-name">{s.style_name}</div>
