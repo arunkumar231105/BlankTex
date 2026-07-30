@@ -521,3 +521,12 @@ h1,h2,h3,h4 { margin: 0; }
 /* Graceful placeholders when a product image cannot load (blocked CDN, missing URL) */
 .thumb-fallback { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 20px; line-height: 1; }
 .pv-hero-fallback { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; min-height: 200px; font-size: 96px; opacity: .85; }
+
+/* Price highlighting + contained long fabric description */
+.price-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: 999px; background: #e7f7ee; color: #0a7d3f; font-weight: 800; font-size: 13px; letter-spacing: .01em; }
+.price-inline { color: #0a7d3f; font-weight: 800; }
+.clickable-row { cursor: pointer; }
+.clickable-row:hover { background: #f6f8fc; }
+.fabric-val { display: block; max-height: 88px; overflow-y: auto; line-height: 1.4; padding-right: 6px; }
+.fabric-val::-webkit-scrollbar { width: 6px; }
+.fabric-val::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }

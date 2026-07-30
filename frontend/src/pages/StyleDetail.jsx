@@ -7,6 +7,7 @@ import SizesTab from './style/SizesTab.jsx';
 import SkusTab from './style/SkusTab.jsx';
 import ImagesTab from './style/ImagesTab.jsx';
 import DecorationsTab from './style/DecorationsTab.jsx';
+import StylePreview from '../components/dashboard/StylePreview.jsx';
 
 const TABS = ['Overview', 'Images', 'Colors', 'Sizes', 'Decorations', 'SKUs'];
 
@@ -24,6 +25,19 @@ export default function StyleDetail() {
 
   if (error) return <div className="error-box">{error}</div>;
   if (!style) return <div className="loading">Loading…</div>;
+
+  // Synced supplier styles (e.g. S&S Activewear) are read-only — show the rich
+  // preview (colours, sizes, price, stock, images) instead of the editable tabs.
+  if (style.supplier_catalog) {
+    return (
+      <>
+        <div className="page-head"><div>
+          <div className="page-desc"><Link to="/styles" style={{ color: 'var(--primary)' }}>← Styles</Link></div>
+        </div></div>
+        <StylePreview detail={style} loading={false} />
+      </>
+    );
+  }
 
   return (
     <>

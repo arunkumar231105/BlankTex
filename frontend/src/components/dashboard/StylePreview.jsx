@@ -26,6 +26,10 @@ export default function StylePreview({ detail, loading }) {
   const s = detail;
   const emoji = CAT_EMOJI[s.garment_category] || '👕';
   const active = s.active && !s.discontinued;
+  const money = (n) => `$${Number(n).toFixed(2)}`;
+  const priceLabel = s.price_min != null
+    ? (Number(s.price_min) === Number(s.price_max) ? money(s.price_min) : `${money(s.price_min)} – ${money(s.price_max)}`)
+    : null;
   const images = s.images || [];
   const hero = images[activeImg] || images[0];
   const selectedColor = s.colors.find((color) => color.style_color_id === activeColorId) || s.colors[0];
@@ -36,6 +40,7 @@ export default function StylePreview({ detail, loading }) {
         <div className="pv-head">
           <h2>{s.style_no} — {s.style_name}</h2>
           <span className={`badge ${active ? 'green' : 'grey'}`}>{active ? 'Active' : s.product_status}</span>
+          {priceLabel && <span className="price-chip">{priceLabel}</span>}
           <span className="spacer" />
           {!s.supplier_catalog && <button className="btn sm" onClick={() => navigate(`/styles/${s.style_id}`)}>✎ Edit Style</button>}
           {!s.supplier_catalog && <button className="btn sm" onClick={() => navigate(`/styles/${s.style_id}`)}>Manage ▾</button>}
@@ -53,7 +58,7 @@ export default function StylePreview({ detail, loading }) {
             <Info k="Fit" v={s.fit_type} />
             <Info k="Neck" v={s.neck_type} />
             <Info k="Sleeve" v={s.sleeve_type} />
-            <Info k="Fabric" v={s.fabric_composition} />
+            <Info k="Fabric" v={s.fabric_composition ? <span className="fabric-val">{s.fabric_composition}</span> : null} />
             <Info k="Fabric Weight" v={s.fabric_weight_oz ? `${s.fabric_weight_oz} oz / ${s.fabric_weight_gsm ?? '—'} g` : null} />
             <Info k="Fabric Type" v={s.fabric_type} />
             {s.supplier_catalog && <Info k="Original Name" v={s.raw_style_name} />}
@@ -99,12 +104,14 @@ export default function StylePreview({ detail, loading }) {
             <Info k="MOQ" v={s.supplier_moq ? `${s.supplier_moq} Pcs` : null} />
             <Info k="Lead Time" v={s.supplier_lead_time ? `${s.supplier_lead_time} Business Days` : null} />
             <Info k="Currency" v={s.supplier_currency} />
+            {priceLabel && <Info k="Price" v={<b className="price-inline">{priceLabel}</b>} />}
             <Info k="Featured" v={s.is_featured ? 'Yes' : 'No'} />
             <Info k="Status" v={s.product_status} />
             <h4 style={{ marginTop: 18 }}>Summary</h4>
             <Info k="Colors" v={String(s.colors.length)} />
             <Info k="Sizes" v={String(s.sizes.length)} />
-            <Info k="Total SKUs" v={String(s.sizes.reduce((a, z) => a + (z.sku_count || 0), 0))} />
+            <Info k="Total SKUs" v={String(s.total_skus ?? s.sizes.reduce((a, z) => a + (z.sku_count || 0), 0))} />
+            {s.total_stock != null && <Info k="In Stock" v={`${Number(s.total_stock).toLocaleString()} pcs`} />}
             {s.supplier_catalog && <Info k="SKU Pattern" v={`${s.style_no}-COLOR-SIZE`} />}
           </div>
         </div>
@@ -143,13 +150,14 @@ export default function StylePreview({ detail, loading }) {
             ? (
               <div className="tbl-wrap">
                 <table className="tbl">
-                  <thead><tr><th>Size</th><th>Chest (cm)</th><th>Length (cm)</th><th>SKUs</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Size</th><th>Chest (cm)</th><th>Length (cm)</th><th>Price</th><th>SKUs</th><th>Status</th></tr></thead>
                   <tbody>
                     {s.sizes.map((z) => (
                       <tr key={z.style_size_id}>
                         <td style={{ fontWeight: 600 }}>{z.size_code}</td>
                         <td>{z.chest_circumference ?? z.chest_width ?? '—'}</td>
                         <td>{z.body_length ?? z.pants_length ?? '—'}</td>
+                        <td>{z.price != null ? <b className="price-inline">{money(z.price)}</b> : '—'}</td>
                         <td>{z.sku_count}</td>
                         <td><span className={`badge ${z.active ? 'green' : 'grey'}`}>{z.active ? 'Active' : 'Inactive'}</span></td>
                       </tr>

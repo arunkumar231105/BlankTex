@@ -191,15 +191,20 @@ router.get('/:id', wrap(async (req, res) => {
       JOIN suppliers sup ON sup.supplier_id = ss.supplier_id
      WHERE ss.ss_style_id = $1 AND ss.active AND ss.enabled`, [req.params.id])).rows[0];
   if (ssStyle) {
-    const [colors, sizes] = await Promise.all([
+    const [colors, sizes, priceAgg] = await Promise.all([
       query(`SELECT ss_color_id style_color_id, color_code supplier_color_code, color_code internal_color_code,
                     display_name, color_name, COALESCE(hex_color,'#d7dce5') hex_color, TRUE active, FALSE discontinued
                FROM ss_style_colors WHERE ss_style_id = $1 ORDER BY sort_order, display_name`, [req.params.id]),
       query(`SELECT z.ss_size_id style_size_id, z.size_code, z.size_name, NULL::numeric chest_circumference,
                     NULL::numeric body_length, TRUE active, FALSE discontinued,
-                    (SELECT COUNT(*) FROM ss_style_skus k WHERE k.ss_style_id = $1 AND k.size_code = z.size_code)::int sku_count
+                    (SELECT COUNT(*) FROM ss_style_skus k WHERE k.ss_style_id = $1 AND k.size_code = z.size_code)::int sku_count,
+                    (SELECT MIN(customer_price) FROM ss_style_skus k WHERE k.ss_style_id = $1 AND k.size_code = z.size_code) price,
+                    (SELECT SUM(qty) FROM ss_style_skus k WHERE k.ss_style_id = $1 AND k.size_code = z.size_code)::bigint stock
                FROM ss_style_sizes z WHERE z.ss_style_id = $1 ORDER BY z.sort_order, z.size_code`, [req.params.id]),
+      query(`SELECT MIN(customer_price) lo, MAX(customer_price) hi, SUM(qty)::bigint stock,
+                    COUNT(*)::int skus FROM ss_style_skus WHERE ss_style_id = $1`, [req.params.id]),
     ]);
+    const agg = priceAgg.rows[0] || {};
     const images = (ssStyle.images || []).map((url, index) => ({
       style_image_id: `${ssStyle.ss_style_id}-${index}`, image_url: url,
       alt_text: ssStyle.title, is_primary: index === 0,
@@ -214,7 +219,11 @@ router.get('/:id', wrap(async (req, res) => {
       brand_name: ssStyle.brand_name, brand_code: ssStyle.brand_name, brand_logo: null,
       supplier_name: ssStyle.supplier_name, supplier_code: ssStyle.supplier_code,
       supplier_lead_time: ssStyle.supplier_lead_time, supplier_moq: ssStyle.supplier_moq,
-      supplier_currency: ssStyle.supplier_currency,
+      supplier_currency: ssStyle.supplier_currency || 'USD',
+      price_min: agg.lo != null ? Number(agg.lo) : null,
+      price_max: agg.hi != null ? Number(agg.hi) : null,
+      total_stock: agg.stock != null ? Number(agg.stock) : null,
+      total_skus: agg.skus || 0,
       colors: colors.rows, sizes: sizes.rows, images,
     });
   }
