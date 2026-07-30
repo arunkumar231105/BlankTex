@@ -227,6 +227,72 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS ix_supplier_catalog_sizes_supplier ON supplier_catalog_sizes(supplier_id,active);
     ALTER TABLE supplier_catalog_styles ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
 
+    -- ===== S&S Activewear supplier-scoped catalog =====
+    -- Fully separate from the manual BlankTex catalog and from RIIN. S&S carries
+    -- per-style colours/sizes (unlike RIIN's global lists), so it gets its own tables.
+    CREATE TABLE IF NOT EXISTS ss_styles (
+      ss_style_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      supplier_id    UUID NOT NULL REFERENCES suppliers(supplier_id) ON DELETE CASCADE,
+      ss_style_ref   VARCHAR(30) NOT NULL,           -- S&S styleID (stable unique key)
+      style_code     VARCHAR(80) NOT NULL,           -- S&S styleName, e.g. "2000" (display)
+      part_number    VARCHAR(80),
+      title          VARCHAR(250) NOT NULL,
+      brand_name     VARCHAR(150),
+      category       VARCHAR(120),
+      description    TEXT,
+      fabric         VARCHAR(250),
+      images         JSONB NOT NULL DEFAULT '[]'::jsonb,
+      active         BOOLEAN NOT NULL DEFAULT TRUE,
+      enabled        BOOLEAN NOT NULL DEFAULT TRUE,
+      last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT uq_ss_style UNIQUE (supplier_id, ss_style_ref)
+    );
+    CREATE INDEX IF NOT EXISTS ix_ss_styles_supplier ON ss_styles(supplier_id, active, enabled);
+    CREATE INDEX IF NOT EXISTS ix_ss_styles_brand ON ss_styles(supplier_id, brand_name);
+
+    CREATE TABLE IF NOT EXISTS ss_style_colors (
+      ss_color_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      ss_style_id  UUID NOT NULL REFERENCES ss_styles(ss_style_id) ON DELETE CASCADE,
+      color_code   VARCHAR(40) NOT NULL,
+      color_name   VARCHAR(120) NOT NULL,
+      display_name VARCHAR(120) NOT NULL,
+      hex_color    VARCHAR(9),
+      color_family VARCHAR(60),
+      swatch_image VARCHAR(300),
+      front_image  VARCHAR(300),
+      back_image   VARCHAR(300),
+      side_image   VARCHAR(300),
+      sort_order   INTEGER NOT NULL DEFAULT 0,
+      CONSTRAINT uq_ss_color UNIQUE (ss_style_id, color_code)
+    );
+    CREATE INDEX IF NOT EXISTS ix_ss_colors_style ON ss_style_colors(ss_style_id);
+
+    CREATE TABLE IF NOT EXISTS ss_style_sizes (
+      ss_size_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      ss_style_id  UUID NOT NULL REFERENCES ss_styles(ss_style_id) ON DELETE CASCADE,
+      size_code    VARCHAR(40) NOT NULL,
+      size_name    VARCHAR(80) NOT NULL,
+      sort_order   INTEGER NOT NULL DEFAULT 0,
+      CONSTRAINT uq_ss_size UNIQUE (ss_style_id, size_code)
+    );
+    CREATE INDEX IF NOT EXISTS ix_ss_sizes_style ON ss_style_sizes(ss_style_id);
+
+    CREATE TABLE IF NOT EXISTS ss_style_skus (
+      ss_sku_id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      ss_style_id    UUID NOT NULL REFERENCES ss_styles(ss_style_id) ON DELETE CASCADE,
+      color_code     VARCHAR(40) NOT NULL,
+      size_code      VARCHAR(40) NOT NULL,
+      sku            VARCHAR(60),
+      gtin           VARCHAR(40),
+      piece_price    NUMERIC(10,2),
+      customer_price NUMERIC(10,2),
+      qty            INTEGER NOT NULL DEFAULT 0,
+      warehouses     JSONB NOT NULL DEFAULT '[]'::jsonb,
+      weight         NUMERIC(8,3),
+      CONSTRAINT uq_ss_sku UNIQUE (ss_style_id, color_code, size_code)
+    );
+    CREATE INDEX IF NOT EXISTS ix_ss_skus_style ON ss_style_skus(ss_style_id);
+
     CREATE TABLE IF NOT EXISTS purchase_items (
       purchase_item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       purchase_id UUID NOT NULL REFERENCES purchases (purchase_id) ON DELETE CASCADE,
@@ -300,6 +366,19 @@ async function migrate() {
   } catch (error) {
     console.warn('RIIN catalog sync skipped; using last saved catalog:', error.message);
   }
+
+  // S&S Activewear distributor. Its catalog is populated by the on-demand
+  // importer (importSSCatalog.js), never on startup — the API pull is large.
+  await query(`
+    INSERT INTO suppliers
+      (supplier_code,supplier_name,supplier_type,website,api_available,api_provider,catalog_source,
+       default_currency,dropship_available,default_status,remarks)
+    VALUES ('SSA','S&S Activewear','Distributor','https://www.ssactivewear.com',TRUE,'ssactivewear','API',
+            'USD',TRUE,'Active','S&S Activewear distributor catalog synced via REST API v2.')
+    ON CONFLICT (supplier_code) DO UPDATE SET
+      supplier_name=EXCLUDED.supplier_name,website=EXCLUDED.website,api_available=TRUE,
+      api_provider='ssactivewear',catalog_source='API',default_status='Active',remarks=EXCLUDED.remarks
+  `);
   console.log('Migrations applied (catalog, authentication and purchasing ready).');
 }
 

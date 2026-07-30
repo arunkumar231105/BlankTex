@@ -21,6 +21,38 @@ router.get('/', wrap(async (req, res) => {
   // A selected supplier is an explicit supplier-catalog view. Do not mix the
   // manually managed BlankTex catalog with records synced from another source.
   if (supplier) {
+    // S&S Activewear keeps a per-style catalog in its own tables. If the selected
+    // supplier has ss_styles rows, serve those; otherwise fall through to the
+    // shared supplier_catalog_styles path (RIIN and similar).
+    const ssCount = (await query(
+      'SELECT COUNT(*)::int n FROM ss_styles WHERE supplier_id = $1 AND active AND enabled', [supplier],
+    )).rows[0].n;
+    if (ssCount > 0) {
+      const p2 = [supplier];
+      const cl = ['ss.supplier_id = $1', 'ss.active', 'ss.enabled'];
+      if (search) {
+        p2.push(`%${search}%`);
+        cl.push(`(ss.style_code ILIKE $${p2.length} OR ss.title ILIKE $${p2.length} OR ss.brand_name ILIKE $${p2.length})`);
+      }
+      const where2 = `WHERE ${cl.join(' AND ')}`;
+      const total2 = (await query(`SELECT COUNT(*)::int n FROM ss_styles ss ${where2}`, p2)).rows[0].n;
+      const lp = [...p2, pageSize, (page - 1) * pageSize];
+      const { rows } = await query(`
+        SELECT ss.ss_style_id style_id, ss.style_code style_no, ss.title style_name,
+               ss.style_code short_name, COALESCE(ss.category,'Supplier Catalog') garment_category,
+               NULL::text gender, NULL::text fit_type, 'Active' product_status,
+               ss.active, FALSE discontinued, FALSE is_featured,
+               ss.supplier_id brand_id, ss.brand_name,
+               COALESCE(ss.images->>0,'') primary_image,
+               (SELECT COUNT(*) FROM ss_style_skus k WHERE k.ss_style_id = ss.ss_style_id)::int sku_count,
+               TRUE supplier_catalog
+          FROM ss_styles ss
+          ${where2}
+         ORDER BY ss.brand_name, ss.style_code
+         LIMIT $${p2.length + 1} OFFSET $${p2.length + 2}`, lp);
+      return res.json({ data: rows, page, pageSize, total: total2, totalPages: Math.ceil(total2 / pageSize) || 1 });
+    }
+
     const params = [supplier];
     const clauses = ['scs.supplier_id = $1', 'scs.active = TRUE', 'scs.enabled = TRUE'];
     if (search) {
@@ -127,6 +159,42 @@ router.put('/supplier-catalog/:id/status', wrap(async (req, res) => {
 
 // Full detail: style + brand + default supplier + colors + sizes(with specs)
 router.get('/:id', wrap(async (req, res) => {
+  // S&S Activewear per-style catalog takes precedence (its own tables).
+  const ssStyle = (await query(`
+    SELECT ss.*, sup.supplier_name, sup.supplier_code, sup.website, sup.default_currency supplier_currency,
+           sup.lead_time_days supplier_lead_time, sup.minimum_order supplier_moq
+      FROM ss_styles ss
+      JOIN suppliers sup ON sup.supplier_id = ss.supplier_id
+     WHERE ss.ss_style_id = $1 AND ss.active AND ss.enabled`, [req.params.id])).rows[0];
+  if (ssStyle) {
+    const [colors, sizes] = await Promise.all([
+      query(`SELECT ss_color_id style_color_id, color_code supplier_color_code, color_code internal_color_code,
+                    display_name, color_name, COALESCE(hex_color,'#d7dce5') hex_color, TRUE active, FALSE discontinued
+               FROM ss_style_colors WHERE ss_style_id = $1 ORDER BY sort_order, display_name`, [req.params.id]),
+      query(`SELECT z.ss_size_id style_size_id, z.size_code, z.size_name, NULL::numeric chest_circumference,
+                    NULL::numeric body_length, TRUE active, FALSE discontinued,
+                    (SELECT COUNT(*) FROM ss_style_skus k WHERE k.ss_style_id = $1 AND k.size_code = z.size_code)::int sku_count
+               FROM ss_style_sizes z WHERE z.ss_style_id = $1 ORDER BY z.sort_order, z.size_code`, [req.params.id]),
+    ]);
+    const images = (ssStyle.images || []).map((url, index) => ({
+      style_image_id: `${ssStyle.ss_style_id}-${index}`, image_url: url,
+      alt_text: ssStyle.title, is_primary: index === 0,
+    }));
+    return res.json({
+      style_id: ssStyle.ss_style_id, supplier_catalog: true, supplier_id: ssStyle.supplier_id,
+      style_no: ssStyle.style_code, style_name: ssStyle.title, raw_style_name: ssStyle.title,
+      short_name: ssStyle.style_code, garment_category: ssStyle.category || 'Supplier Catalog',
+      garment_type: ssStyle.title, fabric_composition: ssStyle.fabric,
+      gender: null, fit_type: null, neck_type: null, sleeve_type: null,
+      product_status: 'Active', active: ssStyle.active, discontinued: false, is_featured: false,
+      brand_name: ssStyle.brand_name, brand_code: ssStyle.brand_name, brand_logo: null,
+      supplier_name: ssStyle.supplier_name, supplier_code: ssStyle.supplier_code,
+      supplier_lead_time: ssStyle.supplier_lead_time, supplier_moq: ssStyle.supplier_moq,
+      supplier_currency: ssStyle.supplier_currency,
+      colors: colors.rows, sizes: sizes.rows, images,
+    });
+  }
+
   const supplierStyle = (await query(`
     SELECT scs.*,sup.supplier_name,sup.supplier_code,sup.website,sup.default_currency supplier_currency,
            sup.lead_time_days supplier_lead_time,sup.minimum_order supplier_moq
