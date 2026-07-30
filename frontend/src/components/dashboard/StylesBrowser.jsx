@@ -2,7 +2,7 @@ import SmartThumb from '../SmartThumb.jsx';
 
 const THUMB = { 'T-Shirt': '👕', Hoodie: '🧥', Sweatshirt: '👚', 'Tank Top': '🎽', Polo: '👔', Cap: '🧢' };
 
-export default function StylesBrowser({ filters, query, list, loading, error, selectedId, onSelect, onQuery, supplierSelected }) {
+export default function StylesBrowser({ filters, query, list, loading, error, selectedId, onSelect, onQuery, supplierSelected, brandOptions = [] }) {
   const { data, total, page, totalPages } = list;
 
   return (
@@ -12,6 +12,13 @@ export default function StylesBrowser({ filters, query, list, loading, error, se
       <div className="b-search">
         <span className="si">🔍</span>
         <input placeholder="Search styles…" value={query.search} onChange={(e) => onQuery({ search: e.target.value })} />
+      </div>
+
+      <div className="b-filters">
+        <select value={query.brand} onChange={(e) => onQuery({ brand: e.target.value })}>
+          <option value="">All Brands</option>
+          {brandOptions.map((b) => <option key={b}>{b}</option>)}
+        </select>
       </div>
 
       {!supplierSelected && <div className="b-filters">

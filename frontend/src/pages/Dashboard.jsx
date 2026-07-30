@@ -10,8 +10,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState([]);
   const [supplier, setSupplier] = useState('');
-  const [filters, setFilters] = useState({ categories: [], genders: [], fits: [] });
-  const [query, setQuery] = useState({ search: '', category: '', gender: '', fit: '', page: 1, pageSize: 7 });
+  const [brands, setBrands] = useState([]);
+  const [filters, setFilters] = useState({ categories: [], genders: [], fits: [], brands: [] });
+  const [query, setQuery] = useState({ search: '', brand: '', category: '', gender: '', fit: '', page: 1, pageSize: 7 });
   const [list, setList] = useState({ data: [], total: 0, totalPages: 1, page: 1 });
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -20,8 +21,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     api.list('suppliers').then(setSuppliers).catch(() => {});
+    api.list('brands').then(setBrands).catch(() => {});
     api.styleFilters().then(setFilters).catch(() => {});
   }, []);
+
+  // Brand dropdown: a selected supplier lists only that supplier's brands;
+  // otherwise the managed catalog's own brands.
+  const brandOptions = supplier
+    ? brands.filter((b) => b.supplier_id === supplier).map((b) => b.brand_name).sort()
+    : (filters.brands || []);
 
   const loadList = useCallback(async () => {
     setLoading(true); setError(null);
@@ -60,7 +68,7 @@ export default function Dashboard() {
         <div>
           <SupplierSelect suppliers={suppliers} value={supplier} onChange={(v) => {
             setSupplier(v);
-            setQuery((current) => ({ ...current, category: '', gender: '', fit: '', page: 1 }));
+            setQuery((current) => ({ ...current, brand: '', category: '', gender: '', fit: '', page: 1 }));
             setSelectedId(null);
             setDetail(null);
           }} />
@@ -75,6 +83,7 @@ export default function Dashboard() {
             onSelect={setSelectedId}
             onQuery={patchQuery}
             supplierSelected={Boolean(supplier)}
+            brandOptions={brandOptions}
           />
         </div>
         <StylePreview detail={detail} loading={loading} />

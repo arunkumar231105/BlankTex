@@ -14,7 +14,7 @@ const WRITABLE = [
 
 // GET /api/styles?search=&category=&gender=&fit=&page=1&pageSize=7
 router.get('/', wrap(async (req, res) => {
-  const { search, category, gender, fit, supplier, visibility } = req.query;
+  const { search, category, gender, fit, supplier, visibility, brand } = req.query;
   const page = Math.max(1, Number(req.query.page) || 1);
   const pageSize = Math.min(500, Math.max(1, Number(req.query.pageSize) || 7));
 
@@ -30,6 +30,7 @@ router.get('/', wrap(async (req, res) => {
     if (ssCount > 0) {
       const p2 = [supplier];
       const cl = ['ss.supplier_id = $1', 'ss.active', 'ss.enabled'];
+      if (brand) { p2.push(brand); cl.push(`ss.brand_name = $${p2.length}`); }
       if (search) {
         p2.push(`%${search}%`);
         cl.push(`(ss.style_code ILIKE $${p2.length} OR ss.title ILIKE $${p2.length} OR ss.brand_name ILIKE $${p2.length})`);
@@ -86,6 +87,7 @@ router.get('/', wrap(async (req, res) => {
     p.push(`%${search}%`);
     clauses.push(`(s.style_no ILIKE $${p.length} OR s.style_name ILIKE $${p.length} OR b.brand_name ILIKE $${p.length})`);
   }
+  if (brand)    { p.push(brand);    clauses.push(`b.brand_name = $${p.length}`); }
   if (category) { p.push(category); clauses.push(`s.garment_category = $${p.length}`); }
   if (gender)   { p.push(gender);   clauses.push(`s.gender = $${p.length}`); }
   if (fit)      { p.push(fit);      clauses.push(`s.fit_type = $${p.length}`); }
@@ -117,15 +119,17 @@ router.get('/', wrap(async (req, res) => {
 
 // Distinct filter values for dropdowns
 router.get('/filters', wrap(async (_req, res) => {
-  const [cat, gen, fit] = await Promise.all([
+  const [cat, gen, fit, brd] = await Promise.all([
     query(`SELECT DISTINCT garment_category v FROM styles ORDER BY 1`),
     query(`SELECT DISTINCT gender v FROM styles ORDER BY 1`),
     query(`SELECT DISTINCT fit_type v FROM styles WHERE fit_type IS NOT NULL ORDER BY 1`),
+    query(`SELECT DISTINCT b.brand_name v FROM styles s JOIN brands b ON b.brand_id = s.brand_id ORDER BY 1`),
   ]);
   res.json({
     categories: cat.rows.map((r) => r.v),
     genders: gen.rows.map((r) => r.v),
     fits: fit.rows.map((r) => r.v),
+    brands: brd.rows.map((r) => r.v),
   });
 }));
 
