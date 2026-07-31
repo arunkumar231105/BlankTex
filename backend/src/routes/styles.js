@@ -87,37 +87,55 @@ router.get('/', wrap(async (req, res) => {
     return res.json({ data: rows, page, pageSize, total, totalPages: Math.ceil(total / pageSize) || 1 });
   }
 
-  const p = [];
-  const clauses = [];
-  if (visibility === 'dashboard') clauses.push('s.active=TRUE AND s.discontinued=FALSE');
+  // "All Suppliers": the managed BlankTex catalog PLUS the S&S live catalog,
+  // so every style is visible in one place. Shared filter params are referenced
+  // by both halves of the UNION.
+  const up = [];
+  const mClauses = [];
+  const sClauses = ['ss.active', 'ss.enabled'];
+  if (visibility === 'dashboard') mClauses.push('s.active=TRUE AND s.discontinued=FALSE');
   if (search) {
-    p.push(`%${search}%`);
-    clauses.push(`(s.style_no ILIKE $${p.length} OR s.style_name ILIKE $${p.length} OR b.brand_name ILIKE $${p.length})`);
+    up.push(`%${search}%`); const i = up.length;
+    mClauses.push(`(s.style_no ILIKE $${i} OR s.style_name ILIKE $${i} OR b.brand_name ILIKE $${i})`);
+    sClauses.push(`(ss.style_code ILIKE $${i} OR ss.title ILIKE $${i} OR ss.brand_name ILIKE $${i})`);
   }
-  if (brand)    { p.push(brand);    clauses.push(`b.brand_name = $${p.length}`); }
-  if (category) { p.push(category); clauses.push(`s.garment_category = $${p.length}`); }
-  if (gender)   { p.push(gender);   clauses.push(`s.gender = $${p.length}`); }
-  if (fit)      { p.push(fit);      clauses.push(`s.fit_type = $${p.length}`); }
-  if (supplier) { p.push(supplier); clauses.push(`s.default_supplier_id = $${p.length}`); }
-  const filterSql = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  if (brand)    { up.push(brand);    const i = up.length; mClauses.push(`b.brand_name = $${i}`); sClauses.push(`ss.brand_name = $${i}`); }
+  if (category) { up.push(category); const i = up.length; mClauses.push(`s.garment_category = $${i}`); sClauses.push(`ss.category = $${i}`); }
+  if (gender)   { up.push(gender);   const i = up.length; mClauses.push(`s.gender = $${i}`); sClauses.push(`ss.gender = $${i}`); }
+  if (fit)      { up.push(fit);      const i = up.length; mClauses.push(`s.fit_type = $${i}`); sClauses.push('FALSE'); }
 
-  const countRes = await query(
-    `SELECT COUNT(*)::int n FROM styles s JOIN brands b ON b.brand_id = s.brand_id ${filterSql}`,
-    p,
-  );
-  const total = countRes.rows[0].n;
+  const mWhere = mClauses.length ? `WHERE ${mClauses.join(' AND ')}` : '';
+  const sWhere = `WHERE ${sClauses.join(' AND ')}`;
 
-  const listParams = [...p, pageSize, (page - 1) * pageSize];
+  const unionInner = `
+    SELECT s.style_id, s.style_no, s.style_name, s.garment_category, s.gender, s.fit_type,
+           s.product_status, s.active, s.discontinued, s.is_featured, b.brand_id, b.brand_name,
+           (SELECT COUNT(*)::int FROM style_color_sizes sc WHERE sc.style_id=s.style_id) sku_count,
+           (SELECT si.image_url FROM style_images si WHERE si.style_id=s.style_id ORDER BY si.is_primary DESC, si.sort_order LIMIT 1) primary_image,
+           FALSE supplier_catalog, 0 grp, s.display_order ord, s.style_no ord2
+      FROM styles s JOIN brands b ON b.brand_id=s.brand_id ${mWhere}
+    UNION ALL
+    SELECT ss.ss_style_id, ss.style_code, ss.title, COALESCE(ss.category,'Supplier Catalog'), ss.gender, NULL::varchar,
+           'Active'::varchar, ss.active, FALSE, FALSE, ss.supplier_id, ss.brand_name,
+           (SELECT COUNT(*)::int FROM ss_style_skus k WHERE k.ss_style_id=ss.ss_style_id) sku_count,
+           COALESCE(ss.images->>0,'') primary_image,
+           TRUE, 1, 0, ss.style_code
+      FROM ss_styles ss ${sWhere}`;
+
+  const countInner = `
+    SELECT s.style_id FROM styles s JOIN brands b ON b.brand_id=s.brand_id ${mWhere}
+    UNION ALL
+    SELECT ss.ss_style_id FROM ss_styles ss ${sWhere}`;
+  const total = (await query(`SELECT COUNT(*)::int n FROM (${countInner}) u`, up)).rows[0].n;
+
+  const listParams = [...up, pageSize, (page - 1) * pageSize];
   const { rows } = await query(
-    `SELECT s.style_id, s.style_no, s.style_name, s.short_name, s.garment_category,
-            s.gender, s.fit_type, s.product_status, s.active, s.discontinued, s.is_featured,
-            b.brand_id, b.brand_name,
-            (SELECT COUNT(*)::int FROM style_color_sizes sc WHERE sc.style_id = s.style_id) AS sku_count
-       FROM styles s
-       JOIN brands b ON b.brand_id = s.brand_id
-       ${filterSql}
-      ORDER BY s.display_order, s.style_no
-      LIMIT $${p.length + 1} OFFSET $${p.length + 2}`,
+    `SELECT u.style_id, u.style_no, u.style_name, u.garment_category, u.gender, u.fit_type,
+            u.product_status, u.active, u.discontinued, u.is_featured, u.brand_id, u.brand_name,
+            u.sku_count, u.primary_image, u.supplier_catalog
+       FROM (${unionInner}) u
+      ORDER BY u.grp, u.ord, u.ord2
+      LIMIT $${up.length + 1} OFFSET $${up.length + 2}`,
     listParams,
   );
 
@@ -143,11 +161,21 @@ router.get('/filters', wrap(async (req, res) => {
     return res.json({ categories: [], genders: [], fits: [], brands: [] });
   }
 
+  // "All Suppliers" view spans the managed catalog and the S&S live catalog.
   const [cat, gen, fit, brd] = await Promise.all([
-    query(`SELECT DISTINCT garment_category v FROM styles ORDER BY 1`),
-    query(`SELECT DISTINCT gender v FROM styles ORDER BY 1`),
+    query(`SELECT DISTINCT v FROM (
+             SELECT garment_category v FROM styles
+             UNION SELECT category v FROM ss_styles WHERE active AND enabled AND category IS NOT NULL
+           ) t WHERE v IS NOT NULL ORDER BY 1`),
+    query(`SELECT DISTINCT v FROM (
+             SELECT gender v FROM styles
+             UNION SELECT gender v FROM ss_styles WHERE active AND enabled AND gender IS NOT NULL
+           ) t WHERE v IS NOT NULL ORDER BY 1`),
     query(`SELECT DISTINCT fit_type v FROM styles WHERE fit_type IS NOT NULL ORDER BY 1`),
-    query(`SELECT DISTINCT b.brand_name v FROM styles s JOIN brands b ON b.brand_id = s.brand_id ORDER BY 1`),
+    query(`SELECT DISTINCT v FROM (
+             SELECT b.brand_name v FROM styles s JOIN brands b ON b.brand_id = s.brand_id
+             UNION SELECT brand_name v FROM ss_styles WHERE active AND enabled
+           ) t ORDER BY 1`),
   ]);
   res.json({
     categories: cat.rows.map((r) => r.v),
