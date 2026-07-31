@@ -163,13 +163,20 @@ export default function Purchase() {
     const key = `${index}:${role}`;
     setUploading((current) => ({ ...current, [key]: role }));
     try {
-      const data = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('Could not read image'));
-        reader.readAsDataURL(file);
+      // Upload the binary file straight to Cloudinary (no base64, no relay through
+      // our API) — a single hop to a global CDN, so large prints upload fast.
+      const sig = await api.cloudinaryUploadSignature();
+      const form = new FormData();
+      form.append('file', file);
+      form.append('api_key', sig.api_key);
+      form.append('timestamp', sig.timestamp);
+      form.append('signature', sig.signature);
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, {
+        method: 'POST', body: form,
       });
-      const uploaded = await api.uploadPurchaseImage({ data, mime_type: file.type, original_name: file.name });
+      const out = await response.json();
+      if (!out.secure_url) throw new Error(out.error?.message || 'Upload failed');
+      const uploaded = { url: out.secure_url, public_id: out.public_id, original_name: file.name };
       setItems((current) => current.map((entry, itemIndex) => itemIndex === index
         ? { ...entry, images: { ...entry.images, [role]: uploaded } }
         : entry));

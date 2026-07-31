@@ -47,6 +47,7 @@ export const api = {
 
   // specific
   dashboardStats: () => request('/dashboard/stats'),
+  cloudinaryUploadSignature: () => request('/purchases/upload-signature'),
   styleFilters: (params) => request(`/styles/filters${qs(params || {})}`),
   styleDetail: (id) => request(`/styles/${id}`),
   supplierCatalogStyles: (params) => request(`/styles/supplier-catalog/manage${qs(params)}`),

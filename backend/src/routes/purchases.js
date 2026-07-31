@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { pool, query } from '../db.js';
-import { cloudinaryUpload, supplierConfig, supplierPost, SUPPLIER_STATUSES } from '../supplier.js';
+import { cloudinaryUpload, cloudinarySignature, supplierConfig, supplierPost, SUPPLIER_STATUSES } from '../supplier.js';
 import { syncRiinCatalog } from '../supplierCatalog.js';
 import { wrap } from './crud.js';
 
@@ -130,6 +130,11 @@ router.get('/integration', wrap(async (_req, res) => {
 router.post('/integration/test', wrap(async (_req, res) => {
   const result = await supplierPost('/trade/api/interface/queryColor', { pageIndex: 1, pageSize: 1 });
   res.json({ success: true, connected: true, records: result.data?.records?.length || 0 });
+}));
+
+// Signed params for a direct browser → Cloudinary upload (fast: no relay/base64).
+router.get('/upload-signature', wrap(async (_req, res) => {
+  res.json(cloudinarySignature());
 }));
 
 router.post('/upload', wrap(async (req, res) => {

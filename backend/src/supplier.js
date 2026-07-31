@@ -46,6 +46,19 @@ export async function supplierPost(endpoint, body) {
   return result;
 }
 
+// Signed params for a direct browser → Cloudinary upload (no file passes through
+// our server). Only the api_key + per-request signature are exposed; the secret
+// stays server-side.
+export function cloudinarySignature() {
+  const config = supplierConfig();
+  if (!config.cloudName || !config.cloudinaryKey || !config.cloudinarySecret) {
+    throw Object.assign(new Error('Cloudinary is not configured'), { status: 503 });
+  }
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = createHash('sha1').update(`timestamp=${timestamp}${config.cloudinarySecret}`).digest('hex');
+  return { cloud_name: config.cloudName, api_key: config.cloudinaryKey, timestamp, signature };
+}
+
 export async function cloudinaryUpload(buffer, mimeType, originalName) {
   const config = supplierConfig();
   if (!config.cloudName || !config.cloudinaryKey || !config.cloudinarySecret) {
