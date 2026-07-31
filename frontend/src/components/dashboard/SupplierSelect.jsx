@@ -1,8 +1,11 @@
-export default function SupplierSelect({ suppliers, value, onChange }) {
+export default function SupplierSelect({ suppliers, value, onChange, onClear, canClear }) {
   const current = suppliers.find((s) => s.supplier_id === value);
   return (
     <div className="card card-pad">
-      <h3 style={{ marginBottom: 12 }}>Supplier Selection</h3>
+      <div className="sup-head">
+        <h3>Supplier Selection</h3>
+        {canClear && <button type="button" className="clear-all-btn" onClick={onClear}>✕ Clear all</button>}
+      </div>
       <label className="field label" style={{ fontSize: 12, color: 'var(--muted)' }}>Select Supplier</label>
       <select className="input" style={{ width: '100%', marginTop: 6, padding: '9px 11px', border: '1px solid var(--border)', borderRadius: 9 }}
         value={value} onChange={(e) => onChange(e.target.value)}>

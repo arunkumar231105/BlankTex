@@ -55,6 +55,14 @@ export default function Dashboard() {
 
   const patchQuery = (patch) => setQuery((q) => ({ ...q, ...patch, page: patch.page ?? 1 }));
 
+  const canClear = Boolean(supplier || query.search || query.brand || query.category || query.gender || query.fit);
+  const clearAll = () => {
+    setSupplier('');
+    setQuery((q) => ({ ...q, search: '', brand: '', category: '', gender: '', fit: '', page: 1 }));
+    setSelectedId(null);
+    setDetail(null);
+  };
+
   return (
     <>
       <StatCards />
@@ -67,7 +75,7 @@ export default function Dashboard() {
 
       <div className="dash-grid">
         <div>
-          <SupplierSelect suppliers={suppliers} value={supplier} onChange={(v) => {
+          <SupplierSelect suppliers={suppliers} value={supplier} canClear={canClear} onClear={clearAll} onChange={(v) => {
             setSupplier(v);
             setQuery((current) => ({ ...current, brand: '', category: '', gender: '', fit: '', page: 1 }));
             setSelectedId(null);

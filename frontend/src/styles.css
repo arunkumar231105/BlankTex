@@ -527,6 +527,10 @@ h1,h2,h3,h4 { margin: 0; }
 .price-inline { color: #0a7d3f; font-weight: 800; }
 .clickable-row { cursor: pointer; }
 .clickable-row:hover { background: #f6f8fc; }
+.sup-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.sup-head h3 { margin: 0; }
+.clear-all-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--muted); font-size: 11.5px; font-weight: 700; cursor: pointer; transition: background .12s, color .12s, border-color .12s; }
+.clear-all-btn:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 .fabric-val { display: block; max-height: 88px; overflow-y: auto; line-height: 1.4; padding-right: 6px; }
 .fabric-val::-webkit-scrollbar { width: 6px; }
 .fabric-val::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
