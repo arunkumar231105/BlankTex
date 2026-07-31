@@ -183,7 +183,7 @@ router.post('/sync', wrap(async (req, res) => {
 
 router.post('/import', wrap(async (req, res) => {
   const orderNo = requiredText(req.body?.order_no, 'Supplier Order ID', 80);
-  const supplier = await fulfillmentSupplier(req.body?.supplier_id || (await query("SELECT supplier_id FROM suppliers WHERE supplier_code='RIIN'")).rows[0]?.supplier_id);
+  const supplier = await fulfillmentSupplier(req.body?.supplier_id || (await query("SELECT supplier_id FROM suppliers WHERE UPPER(COALESCE(api_provider,''))='RIIN'")).rows[0]?.supplier_id);
   const result = await supplierPost('/trade/api/interface/queryOrderInfo', { platformOidList: [orderNo] });
   const order = result.data?.[0];
   if (!order) throw httpError('Order not found on supplier portal', 404);

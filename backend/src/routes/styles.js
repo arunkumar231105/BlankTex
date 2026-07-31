@@ -71,8 +71,13 @@ router.get('/', wrap(async (req, res) => {
              'Active' product_status,TRUE active,FALSE discontinued,FALSE is_featured,
              sup.supplier_id brand_id,sup.supplier_code brand_name,
              COALESCE(scs.images->>0,'') primary_image,
-             ((SELECT COUNT(*) FROM supplier_catalog_colors c WHERE c.supplier_id=scs.supplier_id AND c.active) *
-              (SELECT COUNT(*) FROM supplier_catalog_sizes z WHERE z.supplier_id=scs.supplier_id AND z.active))::int sku_count,
+             COALESCE(
+               (SELECT (SELECT COUNT(*) FROM style_colors sc WHERE sc.style_id=ms.style_id AND sc.active) *
+                       (SELECT COUNT(*) FROM style_sizes sz WHERE sz.style_id=ms.style_id AND sz.active)
+                  FROM styles ms WHERE ms.style_no = scs.style_code LIMIT 1),
+               (SELECT COUNT(*) FROM supplier_catalog_colors c WHERE c.supplier_id=scs.supplier_id AND c.active) *
+               (SELECT COUNT(*) FROM supplier_catalog_sizes z WHERE z.supplier_id=scs.supplier_id AND z.active)
+             )::int sku_count,
              TRUE supplier_catalog
         FROM supplier_catalog_styles scs
         JOIN suppliers sup ON sup.supplier_id=scs.supplier_id
@@ -258,7 +263,18 @@ router.get('/:id', wrap(async (req, res) => {
       JOIN suppliers sup ON sup.supplier_id=scs.supplier_id
      WHERE scs.supplier_style_id=$1 AND scs.active=TRUE AND scs.enabled=TRUE`, [req.params.id])).rows[0];
   if (supplierStyle) {
-    const [colors, sizes] = await Promise.all([
+    // The DIGI/RIIN API only exposes a global colour+size palette, not per-style.
+    // When this supplier style matches a curated managed style, show that style's
+    // actual colours/sizes; otherwise fall back to the supplier-wide palette.
+    const managed = (await query('SELECT style_id FROM styles WHERE style_no=$1 LIMIT 1', [supplierStyle.style_code])).rows[0];
+    const [colors, sizes] = managed ? await Promise.all([
+      query(`SELECT style_color_id, supplier_color_code, internal_color_code, display_name, color_name,
+                    COALESCE(hex_color,'#d7dce5') hex_color, active, discontinued
+               FROM style_colors WHERE style_id=$1 AND active=TRUE ORDER BY sort_order, color_name`, [managed.style_id]),
+      query(`SELECT ss.style_size_id, ss.size_code, ss.size_name, TRUE active, FALSE discontinued,
+                    (SELECT COUNT(*)::int FROM style_color_sizes sc WHERE sc.style_size_id=ss.style_size_id) sku_count
+               FROM style_sizes ss WHERE ss.style_id=$1 AND ss.active=TRUE ORDER BY ss.display_order`, [managed.style_id]),
+    ]) : await Promise.all([
       query(`SELECT c.supplier_color_id style_color_id,c.color_code supplier_color_code,
                     c.color_code internal_color_code,c.display_name,c.color_name,
                     COALESCE((SELECT hex_color FROM style_colors legacy

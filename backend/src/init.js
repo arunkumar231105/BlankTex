@@ -360,12 +360,15 @@ async function migrate() {
   await query('CREATE TRIGGER trg_purchases_updated BEFORE UPDATE ON purchases FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
   await query('DROP TRIGGER IF EXISTS trg_purchase_items_updated ON purchase_items');
   await query('CREATE TRIGGER trg_purchase_items_updated BEFORE UPDATE ON purchase_items FOR EACH ROW EXECUTE FUNCTION set_updated_at()');
+  // Rename the legacy RIIN supplier to DIGI Fulfillment (display). api_provider
+  // stays 'RIIN' — it identifies the signed API integration, not the label.
+  await query("UPDATE suppliers SET supplier_code='DIGI', supplier_name='DIGI Fulfillment' WHERE supplier_code='RIIN'");
   const riin = await query(`
     INSERT INTO suppliers
       (supplier_code,supplier_name,supplier_type,website,api_available,api_provider,catalog_source,
        default_currency,dropship_available,default_status,remarks)
-    VALUES ('RIIN','RIIN Fulfillment','Distributor','https://tshirt.riin.com',TRUE,'RIIN','API',
-            'USD',TRUE,'Active','Production fulfillment supplier connected through the RIIN signed API.')
+    VALUES ('DIGI','DIGI Fulfillment','Distributor','https://tshirt.riin.com',TRUE,'RIIN','API',
+            'USD',TRUE,'Active','Production fulfillment supplier connected through the signed API.')
     ON CONFLICT (supplier_code) DO UPDATE SET
       supplier_name=EXCLUDED.supplier_name,website=EXCLUDED.website,api_available=TRUE,
       api_provider='RIIN',catalog_source='API',default_status='Active',remarks=EXCLUDED.remarks
