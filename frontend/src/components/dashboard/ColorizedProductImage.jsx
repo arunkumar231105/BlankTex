@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import GarmentGraphic from './GarmentGraphic.jsx';
 
 function parseHex(hex) {
   const value = String(hex || '').replace('#', '').trim();
@@ -72,7 +73,7 @@ function recolorNeutralGarment(imageData, color) {
   }
 }
 
-export default function ColorizedProductImage({ src, color, alt }) {
+export default function ColorizedProductImage({ src, color, alt, category }) {
   const canvasRef = useRef(null);
   const [failed, setFailed] = useState(false);
 
@@ -104,9 +105,9 @@ export default function ColorizedProductImage({ src, color, alt }) {
     };
   }, [src, color]);
 
-  // Some supplier CDNs block cross-site hotlinking; show a clean garment
-  // placeholder instead of a broken image icon.
-  if (failed) return <div className="pv-hero-fallback" role="img" aria-label={alt}>👕</div>;
+  // Some supplier CDNs block cross-site hotlinking; fall back to a colour-accurate
+  // garment silhouette so the preview still reflects the product and its colour.
+  if (failed) return <div className="pv-hero-graphic"><GarmentGraphic category={category} color={color} /></div>;
 
   return (
     <canvas

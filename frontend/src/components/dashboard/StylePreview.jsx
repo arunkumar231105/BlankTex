@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ColorizedProductImage from './ColorizedProductImage';
+import GarmentGraphic from './GarmentGraphic.jsx';
 import PrintAreaPanel from '../PrintAreaPanel.jsx';
 
 const CAT_EMOJI = { 'T-Shirt': '👕', Hoodie: '🧥', Sweatshirt: '👚', 'Tank Top': '🎽', Polo: '👔', Cap: '🧢' };
@@ -68,15 +69,16 @@ export default function StylePreview({ detail, loading }) {
           <div className="pv-block">
             <div className="pv-hero" style={{ '--selected-color': selectedColor?.hex_color || '#d7dce5' }}>
               {s.brand_logo && <img className="brand-badge" src={s.brand_logo} alt="" onError={(e) => { e.target.style.display = 'none'; }} />}
-              {hero
+              {hero && !/ssactivewear/i.test(hero.image_url || '')
                 ? <div className="pv-artwork">
                     <ColorizedProductImage
                       src={hero.image_url}
                       color={selectedColor?.hex_color}
                       alt={hero.alt_text || s.style_name}
+                      category={s.garment_category}
                     />
                   </div>
-                : emoji}
+                : <div className="pv-hero-graphic"><GarmentGraphic category={s.garment_category} color={selectedColor?.hex_color} /></div>}
               {selectedColor && (
                 <div className="pv-selected-color">
                   <span style={{ background: selectedColor.hex_color }} />

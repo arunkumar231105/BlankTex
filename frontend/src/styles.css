@@ -521,6 +521,9 @@ h1,h2,h3,h4 { margin: 0; }
 /* Graceful placeholders when a product image cannot load (blocked CDN, missing URL) */
 .thumb-fallback { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 20px; line-height: 1; }
 .pv-hero-fallback { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; min-height: 200px; font-size: 96px; opacity: .85; }
+.pv-hero-graphic { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; min-height: 220px; padding: 20px; }
+.pv-hero-graphic .garment-graphic { max-width: 230px; max-height: 270px; filter: drop-shadow(0 6px 14px rgba(16,24,40,.14)); }
+.style-thumb .garment-graphic { width: 100%; height: 100%; padding: 3px; }
 
 /* Price highlighting + contained long fabric description */
 .price-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: 999px; background: #e7f7ee; color: #0a7d3f; font-weight: 800; font-size: 13px; letter-spacing: .01em; }
