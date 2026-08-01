@@ -7,6 +7,23 @@ import { wrap } from './crud.js';
 const router = Router();
 const imageMimeTypes = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
+// A 504/502/503 or timeout from the supplier gateway is ambiguous — the order
+// may or may not have been created. These must be verified, never blindly retried.
+function isAmbiguousSupplierError(message) {
+  return /\b50[234]\b|timed out|timeout|gateway|ETIMEDOUT|ECONNRESET|socket hang up/i.test(String(message || ''));
+}
+
+// Returns true if the order already exists on the supplier, false if it
+// confirmed does not, or null if we could not verify (e.g. the check itself failed).
+async function orderExistsOnSupplier(orderNo) {
+  try {
+    const result = await supplierPost('/trade/api/interface/queryOrderInfo', { platformOidList: [orderNo] });
+    return Boolean(result.data?.[0] || result.records?.[0]);
+  } catch {
+    return null;
+  }
+}
+
 function httpError(message, status = 400) { return Object.assign(new Error(message), { status }); }
 function requiredText(value, label, max = 250) {
   const result = String(value ?? '').trim();
@@ -246,6 +263,12 @@ router.post('/', wrap(async (req, res) => {
     await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`, [purchaseId]);
     return res.status(201).json({ success:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Submitted' });
   } catch (error) {
+    // A gateway timeout (504 etc.) may mean the order actually went through.
+    // Verify on the supplier before deciding, so we neither lose it nor duplicate it.
+    if (isAmbiguousSupplierError(error.message) && (await orderExistsOnSupplier(orderNo)) === true) {
+      await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`, [purchaseId]);
+      return res.status(201).json({ success:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Submitted',note:'Supplier gateway timed out, but the order was confirmed as placed.' });
+    }
     await query(`UPDATE purchases SET submission_status='Failed',last_sync_error=$1 WHERE purchase_id=$2`, [error.message,purchaseId]);
     return res.status(202).json({ success:false,order_saved:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Failed',message:error.message });
   }
@@ -258,11 +281,23 @@ router.post('/:orderNo/retry', wrap(async (req,res) => {
   if(!order.supplier_payload?.platformOid) throw httpError('Saved supplier payload is missing');
   await fulfillmentSupplier(order.supplier_id);
   await query(`UPDATE purchases SET submission_status='Submitting',last_sync_error=NULL WHERE purchase_id=$1`,[order.purchase_id]);
+  // Guard against duplicates: a prior failure (e.g. a 504) may have actually
+  // created the order. If it already exists on the supplier, mark it Submitted
+  // instead of placing it again.
+  if ((await orderExistsOnSupplier(order.order_no)) === true) {
+    await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`,[order.purchase_id]);
+    return res.json({success:true,order_no:order.order_no,submission_status:'Submitted',note:'Order already existed on the supplier — marked Submitted, no duplicate created.'});
+  }
   try {
     await supplierPost('/trade/api/interface/placeOrder',order.supplier_payload);
     await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`,[order.purchase_id]);
-    res.json({success:true,order_no:order.order_no});
+    res.json({success:true,order_no:order.order_no,submission_status:'Submitted'});
   } catch(error) {
+    // If the retry itself times out, re-verify before calling it Failed.
+    if (isAmbiguousSupplierError(error.message) && (await orderExistsOnSupplier(order.order_no)) === true) {
+      await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`,[order.purchase_id]);
+      return res.json({success:true,order_no:order.order_no,submission_status:'Submitted',note:'Supplier gateway timed out, but the order was confirmed as placed.'});
+    }
     await query(`UPDATE purchases SET submission_status='Failed',last_sync_error=$1 WHERE purchase_id=$2`,[error.message,order.purchase_id]);
     throw error;
   }
