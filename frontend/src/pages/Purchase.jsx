@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { useToast } from '../ui/Toast.jsx';
 import { useNavigate } from 'react-router-dom';
+import usePersistentState, { clearPersistentState } from '../hooks/usePersistentState.js';
+
+const DRAFT_FORM_KEY = 'blanktex_new_order_form';
+const DRAFT_ITEMS_KEY = 'blanktex_new_order_items';
 
 const emptyItem = () => ({
   product_title: '', style_id: '', style_color_id: '', style_size_id: '', craft_type: '1', quantity: 1,
@@ -113,8 +117,10 @@ export default function Purchase() {
   const toast = useToast();
   const navigate = useNavigate();
   const initialForm = useMemo(() => ({ supplier_id: '', order_no: generateOrderId(), carrier: '', order_time: localDateTime(), recipient_name: '', phone: '', address_line_1: '', address_line_2: '', city: '', state_province: '', postal_code: '', country: 'US' }), []);
-  const [form, setForm] = useState(initialForm);
-  const [items, setItems] = useState([]);
+  // Draft persistence: the form + line items survive a page refresh/redeploy
+  // (localStorage), so in-progress work is never lost. Cleared on submit.
+  const [form, setForm] = usePersistentState(DRAFT_FORM_KEY, initialForm);
+  const [items, setItems] = usePersistentState(DRAFT_ITEMS_KEY, []);
   const [catalog, setCatalog] = useState({ suppliers: [], styles: [], colors: [], sizes: [] });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -212,6 +218,9 @@ export default function Purchase() {
     setSubmitting(true);
     try {
       const result = await api.createPurchase({ ...form, order_time: new Date(form.order_time).toISOString(), items });
+      // Order is saved (whether or not supplier submission succeeded) — clear the draft.
+      clearPersistentState(DRAFT_FORM_KEY);
+      clearPersistentState(DRAFT_ITEMS_KEY);
       if (result.success) toast.success(`Order ${result.order_no} placed successfully!`);
       else toast.error(`Order saved, but supplier submission failed: ${result.message}`);
       navigate('/orders', { state: { createdOrder: result.order_no, submissionFailed: !result.success } });
