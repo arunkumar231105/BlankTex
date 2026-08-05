@@ -56,20 +56,26 @@ router.get('/', wrap(async (req, res) => {
       return res.json({ data: rows, page, pageSize, total: total2, totalPages: Math.ceil(total2 / pageSize) || 1 });
     }
 
+    // Join the matched managed style so brand/category/gender filters work.
+    const joinSql = `LEFT JOIN styles ms ON ms.style_no = scs.style_code
+                     LEFT JOIN brands mb ON mb.brand_id = ms.brand_id`;
     const params = [supplier];
     const clauses = ['scs.supplier_id = $1', 'scs.active = TRUE', 'scs.enabled = TRUE'];
     if (search) {
       params.push(`%${search}%`);
       clauses.push(`(scs.style_code ILIKE $${params.length} OR scs.style_name ILIKE $${params.length} OR scs.display_name ILIKE $${params.length})`);
     }
+    if (brand)    { params.push(brand);    clauses.push(`mb.brand_name = $${params.length}`); }
+    if (category) { params.push(category); clauses.push(`ms.garment_category = $${params.length}`); }
+    if (gender)   { params.push(gender);   clauses.push(`ms.gender = $${params.length}`); }
     const where = `WHERE ${clauses.join(' AND ')}`;
-    const total = (await query(`SELECT COUNT(*)::int n FROM supplier_catalog_styles scs ${where}`, params)).rows[0].n;
+    const total = (await query(`SELECT COUNT(*)::int n FROM supplier_catalog_styles scs ${joinSql} ${where}`, params)).rows[0].n;
     const listParams = [...params, pageSize, (page - 1) * pageSize];
     const { rows } = await query(`
       SELECT scs.supplier_style_id style_id,scs.style_code style_no,scs.display_name style_name,
-             scs.style_name short_name,'Supplier Catalog' garment_category,NULL::text gender,NULL::text fit_type,
+             scs.style_name short_name,COALESCE(ms.garment_category,'Supplier Catalog') garment_category,ms.gender,NULL::text fit_type,
              'Active' product_status,TRUE active,FALSE discontinued,FALSE is_featured,
-             sup.supplier_id brand_id,sup.supplier_code brand_name,
+             sup.supplier_id brand_id,COALESCE(mb.brand_name,sup.supplier_code) brand_name,
              COALESCE(scs.images->>0,'') primary_image,
              COALESCE(
                (SELECT (SELECT COUNT(*) FROM style_colors sc WHERE sc.style_id=ms.style_id AND sc.active) *
@@ -81,6 +87,7 @@ router.get('/', wrap(async (req, res) => {
              TRUE supplier_catalog
         FROM supplier_catalog_styles scs
         JOIN suppliers sup ON sup.supplier_id=scs.supplier_id
+        ${joinSql}
         ${where}
        ORDER BY scs.display_name,scs.style_code
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`, listParams);
@@ -157,8 +164,22 @@ router.get('/filters', wrap(async (req, res) => {
       // S&S has no structured "fit" field; gender is derived from the title.
       return res.json({ categories: cat.rows.map((r) => r.v), genders: gen.rows.map((r) => r.v), fits: [], brands: brd.rows.map((r) => r.v) });
     }
-    // Other supplier catalogs (e.g. RIIN) carry no brand/category taxonomy.
-    return res.json({ categories: [], genders: [], fits: [], brands: [] });
+    // Other supplier catalogs (e.g. DIGI/RIIN) have no taxonomy of their own,
+    // but many styles match a curated managed style (by style_no) — derive the
+    // brand/category/gender options from those.
+    const [cat, gen, brd] = await Promise.all([
+      query(`SELECT DISTINCT s.garment_category v FROM supplier_catalog_styles scs
+               JOIN styles s ON s.style_no = scs.style_code
+              WHERE scs.supplier_id=$1 AND scs.active AND s.garment_category IS NOT NULL ORDER BY 1`, [supplier]),
+      query(`SELECT DISTINCT s.gender v FROM supplier_catalog_styles scs
+               JOIN styles s ON s.style_no = scs.style_code
+              WHERE scs.supplier_id=$1 AND scs.active AND s.gender IS NOT NULL ORDER BY 1`, [supplier]),
+      query(`SELECT DISTINCT b.brand_name v FROM supplier_catalog_styles scs
+               JOIN styles s ON s.style_no = scs.style_code
+               JOIN brands b ON b.brand_id = s.brand_id
+              WHERE scs.supplier_id=$1 AND scs.active ORDER BY 1`, [supplier]),
+    ]);
+    return res.json({ categories: cat.rows.map((r) => r.v), genders: gen.rows.map((r) => r.v), fits: [], brands: brd.rows.map((r) => r.v) });
   }
 
   // "All Suppliers" view spans the managed catalog and the S&S live catalog.
