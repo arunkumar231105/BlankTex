@@ -171,18 +171,43 @@ export default function Purchase() {
     try {
       // Upload the binary file straight to Cloudinary (no base64, no relay through
       // our API) — a single hop to a global CDN, so large prints upload fast.
-      const sig = await api.cloudinaryUploadSignature();
-      const form = new FormData();
-      form.append('file', file);
-      form.append('api_key', sig.api_key);
-      form.append('timestamp', sig.timestamp);
-      form.append('signature', sig.signature);
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, {
-        method: 'POST', body: form,
-      });
-      const out = await response.json();
-      if (!out.secure_url) throw new Error(out.error?.message || 'Upload failed');
-      const uploaded = { url: out.secure_url, public_id: out.public_id, original_name: file.name };
+      // Retry transient failures (network drops, 5xx, stale signatures) so a flaky
+      // moment during a large multi-item order doesn't force a full page reload.
+      const maxAttempts = 4;
+      let uploaded = null;
+      let lastError = null;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+          const sig = await api.cloudinaryUploadSignature();
+          const form = new FormData();
+          form.append('file', file);
+          form.append('api_key', sig.api_key);
+          form.append('timestamp', sig.timestamp);
+          form.append('signature', sig.signature);
+          const response = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`, {
+            method: 'POST', body: form,
+          });
+          // Cloudinary sometimes returns HTML on 5xx/edge errors; guard the parse.
+          let out = null;
+          try { out = await response.json(); } catch { out = null; }
+          if (!response.ok || !out?.secure_url) {
+            const msg = out?.error?.message || `Upload failed (${response.status})`;
+            const err = new Error(msg);
+            err.retriable = response.status >= 500 || response.status === 429 || response.status === 401;
+            throw err;
+          }
+          uploaded = { url: out.secure_url, public_id: out.public_id, original_name: file.name };
+          break;
+        } catch (err) {
+          lastError = err;
+          // TypeError from fetch = network layer failure; always retriable.
+          const isNetwork = err instanceof TypeError;
+          const retriable = isNetwork || err.retriable;
+          if (!retriable || attempt === maxAttempts) throw err;
+          await new Promise((r) => setTimeout(r, 400 * 2 ** (attempt - 1)));
+        }
+      }
+      if (!uploaded) throw lastError || new Error('Upload failed');
       setItems((current) => current.map((entry, itemIndex) => itemIndex === index
         ? { ...entry, images: { ...entry.images, [role]: uploaded } }
         : entry));
