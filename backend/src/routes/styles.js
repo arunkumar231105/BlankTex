@@ -272,7 +272,7 @@ router.get('/:id', wrap(async (req, res) => {
       query(`SELECT ss_color_id style_color_id, color_code supplier_color_code, color_code internal_color_code,
                     display_name, color_name, COALESCE(hex_color,'#d7dce5') hex_color, TRUE active, FALSE discontinued
                FROM ss_style_colors WHERE ss_style_id = $1 ORDER BY sort_order, display_name`, [req.params.id]),
-      query(`SELECT z.ss_size_id style_size_id, z.size_code, z.size_name, NULL::numeric chest_circumference,
+      query(`SELECT z.ss_size_id style_size_id, z.size_name size_code, z.size_name, NULL::numeric chest_circumference,
                     NULL::numeric body_length, TRUE active, FALSE discontinued,
                     (SELECT COUNT(*) FROM ss_style_skus k WHERE k.ss_style_id = $1 AND k.size_code = z.size_code)::int sku_count,
                     (SELECT MIN(customer_price) FROM ss_style_skus k WHERE k.ss_style_id = $1 AND k.size_code = z.size_code) price,
