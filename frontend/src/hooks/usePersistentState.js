@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 
-// A useState that persists to localStorage, so the value survives page reloads
-// and redeploys (a new JS bundle resets React state, but localStorage is kept).
-// Used to keep form drafts / UI state where the user left them.
+// A useState that persists to sessionStorage, so the value survives page reloads
+// (refresh / hard refresh / redeploy within the same tab) but is cleared when the
+// tab is closed and reopened. Used to keep form drafts where the user left them
+// without carrying them into a brand-new tab/session.
 export default function usePersistentState(key, initialValue) {
   const [value, setValue] = useState(() => {
     try {
-      const stored = window.localStorage.getItem(key);
+      const stored = window.sessionStorage.getItem(key);
       return stored != null ? JSON.parse(stored) : initialValue;
     } catch {
       return initialValue;
@@ -15,7 +16,7 @@ export default function usePersistentState(key, initialValue) {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(key, JSON.stringify(value));
+      window.sessionStorage.setItem(key, JSON.stringify(value));
     } catch {
       /* storage full or value not serialisable — skip persisting this change */
     }
@@ -26,7 +27,7 @@ export default function usePersistentState(key, initialValue) {
 
 export function clearPersistentState(key) {
   try {
-    window.localStorage.removeItem(key);
+    window.sessionStorage.removeItem(key);
   } catch {
     /* ignore */
   }
