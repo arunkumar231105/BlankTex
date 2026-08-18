@@ -40,6 +40,26 @@ export default function Orders() {
   const [saving, setSaving] = useState(false);
   const [tracking, setTracking] = useState(null);
   const [integration, setIntegration] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
+
+  // Force-download an image regardless of cross-origin headers; fall back to
+  // opening it in a new tab if the fetch is blocked.
+  const downloadImage = async (url, filename) => {
+    try {
+      const response = await fetch(url, { mode: 'cors' });
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename || 'artwork.png';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(url, '_blank', 'noopener');
+    }
+  };
 
   useEffect(() => { const timer = setTimeout(() => setQuery(search.trim()), 350); return () => clearTimeout(timer); }, [search]);
   const load = useCallback(async () => {
@@ -153,7 +173,7 @@ export default function Orders() {
           <div className="order-drawer-body">
             <div className="order-supplier"><small>FULFILLMENT SUPPLIER</small><b>{selected.supplier_name || 'Unassigned'}</b><span>{selected.supplier_code || '—'}</span></div>
             <div className="order-recipient"><h4>Recipient</h4><p>👤 {selected.recipient_name}</p><p>☎ {selected.phone}</p><p>⌖ {[selected.address_line_1, selected.address_line_2, selected.city, selected.state_province, selected.postal_code, selected.country].filter(Boolean).join(', ')}</p>{selected.carrier && <p>🚚 {selected.carrier}</p>}</div>
-            <div><h4 className="order-block-title">Items ({detailItems.length})</h4>{detailItems.map((item) => <div className="order-detail-item" key={item.purchase_item_id}><b>{item.product_title}</b><div className="order-item-tags"><span>{item.style_no}</span><span>{item.color_name || item.color_code}</span><span>{item.size_code}</span><span>Qty: {item.quantity}</span><span>{Number(item.craft_type) === 2 ? 'DTG' : 'Heat Transfer'}</span></div><div className="order-item-images">{(item.images || []).filter((image) => image.image_role.includes('print')).map((image) => <img key={image.purchase_image_id} src={image.image_url} alt={image.image_role} />)}</div></div>)}</div>
+            <div><h4 className="order-block-title">Items ({detailItems.length})</h4>{detailItems.map((item) => <div className="order-detail-item" key={item.purchase_item_id}><b>{item.product_title}</b><div className="order-item-tags"><span>{item.style_no}</span><span>{item.color_name || item.color_code}</span><span>{item.size_code}</span><span>Qty: {item.quantity}</span><span>{Number(item.craft_type) === 2 ? 'DTG' : 'Heat Transfer'}</span></div><div className="order-item-images">{(item.images || []).filter((image) => image.image_role.includes('print')).map((image) => <img key={image.purchase_image_id} className="order-thumb-clickable" src={image.image_url} alt={image.image_role} title="Click to enlarge" onClick={() => setLightbox({ url: image.image_url, role: image.image_role })} />)}</div></div>)}</div>
             <div><h4 className="order-block-title">Notes</h4><textarea className="order-notes" rows="3" value={selected.notes || ''} onChange={(event) => setSelected((current) => ({ ...current, notes: event.target.value }))} placeholder="Add a note…" /><button className="btn sm" onClick={saveNotes} disabled={saving}>Save Notes</button></div>
             {tracking && <div><h4 className="order-block-title">Tracking</h4><div className="order-tracking">{tracking.trackingNumber ? <><b>📬 {tracking.trackingNumber}</b>{tracking.shippingTime && <span>Shipped: {dateTime(tracking.shippingTime)}</span>}{tracking.waybillDataPath && <a href={tracking.waybillDataPath} target="_blank" rel="noreferrer">Download waybill →</a>}</> : 'No tracking information available yet.'}</div></div>}
             {selected.last_sync_error && <div className="error-box">{selected.last_sync_error}</div>}
@@ -164,6 +184,21 @@ export default function Orders() {
 
       {importOpen && <Modal title="Import Order from Supplier" onClose={() => setImportOpen(false)} footer={<><button className="btn" onClick={() => setImportOpen(false)}>Cancel</button><button className="btn primary" onClick={importOrder} disabled={importing}>{importing ? 'Importing…' : 'Import'}</button></>}><p className="modal-copy">Enter the Order ID exactly as it appears on the RIIN supplier portal.</p><div className="field"><label>Supplier Order ID (platformOid)</label><input value={importId} onChange={(event) => setImportId(event.target.value)} placeholder="e.g. ORD-260716123456" autoFocus /></div></Modal>}
       {shippingOpen && selected && <ShippingModal order={selected} busy={saving} onClose={() => setShippingOpen(false)} onSave={async (values) => { setSaving(true); try { await api.updatePurchaseShipping(selected.order_no, values); toast.success('Shipping updated on supplier'); setShippingOpen(false); await openOrder(selected.order_no); await load(); } catch (error) { toast.error(error.message); } finally { setSaving(false); } }} />}
+
+      {lightbox && (
+        <div className="img-lightbox" onClick={() => setLightbox(null)}>
+          <div className="img-lightbox-inner" onClick={(event) => event.stopPropagation()}>
+            <div className="img-lightbox-bar">
+              <span className="img-lightbox-title">{String(lightbox.role || 'Artwork').replace(/_/g, ' ')}</span>
+              <div className="img-lightbox-actions">
+                <button className="btn sm" onClick={() => downloadImage(lightbox.url, `${selected?.order_no || 'artwork'}-${lightbox.role}.png`)}>⭳ Download</button>
+                <button className="btn sm" onClick={() => setLightbox(null)}>✕ Close</button>
+              </div>
+            </div>
+            <img className="img-lightbox-img" src={lightbox.url} alt={lightbox.role} />
+          </div>
+        </div>
+      )}
     </>
   );
 }

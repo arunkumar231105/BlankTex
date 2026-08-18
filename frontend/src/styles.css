@@ -537,3 +537,13 @@ h1,h2,h3,h4 { margin: 0; }
 .fabric-val { display: block; max-height: 88px; overflow-y: auto; line-height: 1.4; padding-right: 6px; }
 .fabric-val::-webkit-scrollbar { width: 6px; }
 .fabric-val::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Order artwork thumbnails → click to enlarge + download */
+.order-thumb-clickable { cursor: zoom-in; transition: transform .1s ease, box-shadow .1s ease; }
+.order-thumb-clickable:hover { transform: scale(1.04); box-shadow: 0 2px 10px rgba(16,24,40,.18); }
+.img-lightbox { position: fixed; inset: 0; z-index: 3000; background: rgba(15,20,30,.82); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.img-lightbox-inner { background: #fff; border-radius: 12px; max-width: 92vw; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+.img-lightbox-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.img-lightbox-title { font-weight: 700; font-size: 13px; text-transform: capitalize; color: var(--text); }
+.img-lightbox-actions { display: flex; gap: 8px; }
+.img-lightbox-img { max-width: 92vw; max-height: calc(92vh - 54px); object-fit: contain; background: #f4f6f9; }
