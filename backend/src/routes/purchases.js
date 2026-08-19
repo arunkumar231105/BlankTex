@@ -74,6 +74,18 @@ const styleSizeIdsSql = (supplier, styleCode) => `
       JOIN supplier_catalog_sizes z ON z.supplier_id=${supplier} AND z.active=TRUE AND ${sizeMatch}
      WHERE ms.style_no=${styleCode}`;
 
+// Per-size garment weight for the same curated twin, keyed by the supplier size id
+// the order actually references. Sizes with no measured weight are simply absent.
+const styleSizeWeightsSql = (supplier, styleCode) => `
+    SELECT JSONB_OBJECT_AGG(w.size_id, w.grams) weights FROM (
+      SELECT z.supplier_size_id size_id, MAX(sp.garment_weight_g) grams
+        FROM styles ms
+        JOIN style_sizes mz ON mz.style_id=ms.style_id AND mz.active=TRUE
+        JOIN style_size_specs sp ON sp.style_size_id=mz.style_size_id AND sp.garment_weight_g IS NOT NULL
+        JOIN supplier_catalog_sizes z ON z.supplier_id=${supplier} AND z.active=TRUE AND ${sizeMatch}
+       WHERE ms.style_no=${styleCode}
+       GROUP BY z.supplier_size_id) w`;
+
 async function catalogItem(client, item, index, supplierId) {
   const quantity = Number.parseInt(item.quantity, 10);
   const craftType = Number.parseInt(item.craft_type, 10);
@@ -160,10 +172,12 @@ router.get('/catalog', wrap(async (_req, res) => {
              FROM suppliers WHERE default_status='Active' ORDER BY supplier_name`),
     query(`SELECT s.supplier_style_id style_id,s.supplier_id,s.style_code style_no,s.display_name style_name,
                   s.style_name raw_name,s.craft_types,s.images,s.price_mode,s.last_synced_at,
-                  COALESCE(cids.ids,'{}') color_ids,COALESCE(zids.ids,'{}') size_ids
+                  COALESCE(cids.ids,'{}') color_ids,COALESCE(zids.ids,'{}') size_ids,
+                  COALESCE(wts.weights,'{}'::jsonb) size_weights
              FROM supplier_catalog_styles s
              LEFT JOIN LATERAL (${styleColorIdsSql('s.supplier_id', 's.style_code')}) cids ON TRUE
              LEFT JOIN LATERAL (${styleSizeIdsSql('s.supplier_id', 's.style_code')}) zids ON TRUE
+             LEFT JOIN LATERAL (${styleSizeWeightsSql('s.supplier_id', 's.style_code')}) wts ON TRUE
             WHERE s.active=TRUE AND s.enabled=TRUE ORDER BY s.supplier_id,s.display_name,s.style_code`),
     query(`SELECT supplier_color_id style_color_id,supplier_id,color_code,display_name color_name,
                   display_name,color_name raw_name,last_synced_at

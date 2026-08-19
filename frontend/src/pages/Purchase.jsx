@@ -25,6 +25,21 @@ function generateOrderId() {
   return `ORD-${stamp}`;
 }
 
+// Garment weight comes from the curated size spec (grams per piece). Only sizes that
+// have a measured weight report one — the rest stay blank rather than guessing.
+function itemUnitWeight(item, catalog) {
+  const style = catalog.styles.find((entry) => entry.style_id === item.style_id);
+  const grams = style?.size_weights?.[item.style_size_id];
+  return grams == null ? null : Number(grams);
+}
+
+function formatWeight(grams) {
+  if (grams == null) return '—';
+  const kg = grams / 1000;
+  const lb = grams / 453.59237;
+  return `${grams < 1000 ? `${Math.round(grams)} g` : `${kg.toFixed(2)} kg`} (${lb.toFixed(2)} lb)`;
+}
+
 function Section({ number, title, children }) {
   return (
     <section className="purchase-section">
@@ -81,6 +96,8 @@ function PurchaseItem({ item, index, catalog, onChange, onRemove, onUpload, uplo
   const colorOptions = useMemo(() => colors.map((color) => ({ value: color.style_color_id, label: color.display_name || color.color_name, hint: color.color_code })), [colors]);
   const sizeOptions = useMemo(() => sizes.map((size) => ({ value: size.style_size_id, label: size.size_name, hint: size.size_code })), [sizes]);
   const supportedCrafts = String(selectedStyle?.craft_types || '1,2').split(',').map((value) => value.trim());
+  const unitWeight = itemUnitWeight(item, catalog);
+  const pieces = Math.max(1, Number.parseInt(item.quantity, 10) || 0);
   const bothSides = item.print_position === '1,2';
   const imageField = (role, label, hint) => (
     <UploadZone
@@ -101,6 +118,11 @@ function PurchaseItem({ item, index, catalog, onChange, onRemove, onUpload, uplo
         <div className="purchase-field"><label>Color *</label><SearchSelect value={item.style_color_id} options={colorOptions} placeholder={item.style_id ? '— Select Color —' : '— Select a style first —'} disabled={!item.style_id} onChange={(value) => onChange('style_color_id', value)} /></div>
         <div className="purchase-field"><label>Size *</label><SearchSelect value={item.style_size_id} options={sizeOptions} placeholder={item.style_id ? '— Select Size —' : '— Select a style first —'} disabled={!item.style_id} onChange={(value) => onChange('style_size_id', value)} /></div>
       </div>
+      {selectedStyle && item.style_size_id && <div className="purchase-weight-line">
+        <span>Weight</span>
+        <b>{unitWeight == null ? 'Not published for this size' : `${formatWeight(unitWeight)} / pc`}</b>
+        {unitWeight != null && <small>× {pieces} pc = {formatWeight(unitWeight * pieces)}</small>}
+      </div>}
       {selectedStyle && <div className="supplier-style-preview">
         {selectedStyle.images?.[0] ? <img src={selectedStyle.images[0]} alt={selectedStyle.style_name} /> : <div className="supplier-style-placeholder">👕</div>}
         <div><b>{selectedStyle.style_name}</b><span>Supplier style: {selectedStyle.style_no}</span><small>{colors.length} colours · {sizes.length} sizes{selectedStyle.color_ids?.length ? '' : ' (supplier-wide palette)'} · SKU: {selectedStyle.style_no}-COLOR-SIZE</small></div>
@@ -294,6 +316,17 @@ export default function Purchase() {
     colors: catalog.colors.filter((color) => color.supplier_id === form.supplier_id),
     sizes: catalog.sizes.filter((size) => size.supplier_id === form.supplier_id),
   };
+  // Order totals. `unweighed` counts items whose size has no published weight, so the
+  // total is never quietly reported as complete when part of it is unknown.
+  const totals = items.reduce((sum, item) => {
+    const pieces = Math.max(0, Number.parseInt(item.quantity, 10) || 0);
+    const unit = itemUnitWeight(item, supplierCatalog);
+    return {
+      pieces: sum.pieces + pieces,
+      grams: sum.grams + (unit == null ? 0 : unit * pieces),
+      unweighed: sum.unweighed + (item.style_size_id && unit == null ? 1 : 0),
+    };
+  }, { pieces: 0, grams: 0, unweighed: 0 });
 
   return (
     <div className="purchase-page">
@@ -331,6 +364,12 @@ export default function Purchase() {
               onUpload={(role, file) => uploadImage(index, role, file)} uploading={uploading[`${index}:front_print`] || uploading[`${index}:front_mockup`] || uploading[`${index}:back_print`] || uploading[`${index}:back_mockup`]}
             />
           ))}
+          {items.length > 0 && <div className="purchase-totals">
+            <div><small>ITEMS</small><b>{items.length}</b></div>
+            <div><small>PIECES</small><b>{totals.pieces}</b></div>
+            <div className="purchase-totals-weight"><small>TOTAL WEIGHT</small><b>{formatWeight(totals.grams)}</b></div>
+            {totals.unweighed > 0 && <span className="purchase-totals-note">No published weight for {totals.unweighed} item{totals.unweighed > 1 ? 's' : ''} — not counted above</span>}
+          </div>}
         </Section>
         </fieldset>
 
