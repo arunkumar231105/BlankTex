@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { useToast } from '../ui/Toast.jsx';
 import { useNavigate } from 'react-router-dom';
 import usePersistentState, { clearPersistentState } from '../hooks/usePersistentState.js';
+import SearchSelect from '../ui/SearchSelect.jsx';
 
 const DRAFT_FORM_KEY = 'blanktex_new_order_form';
 const DRAFT_ITEMS_KEY = 'blanktex_new_order_items';
@@ -64,9 +65,21 @@ function UploadZone({ label, hint, image, uploading, onFile, onClear }) {
 }
 
 function PurchaseItem({ item, index, catalog, onChange, onRemove, onUpload, uploading }) {
-  const colors = catalog.colors;
-  const sizes = catalog.sizes;
   const selectedStyle = catalog.styles.find((entry) => entry.style_id === item.style_id);
+  // A style only comes in the colours/sizes the catalog lists for it. When the
+  // supplier gives no per-style breakdown (color_ids empty) we keep the full
+  // supplier palette rather than leaving the dropdown empty.
+  const colors = useMemo(() => {
+    const allowed = selectedStyle?.color_ids || [];
+    return allowed.length ? catalog.colors.filter((color) => allowed.includes(color.style_color_id)) : catalog.colors;
+  }, [catalog.colors, selectedStyle]);
+  const sizes = useMemo(() => {
+    const allowed = selectedStyle?.size_ids || [];
+    return allowed.length ? catalog.sizes.filter((size) => allowed.includes(size.style_size_id)) : catalog.sizes;
+  }, [catalog.sizes, selectedStyle]);
+  const styleOptions = useMemo(() => catalog.styles.map((style) => ({ value: style.style_id, label: style.style_name, hint: style.style_no })), [catalog.styles]);
+  const colorOptions = useMemo(() => colors.map((color) => ({ value: color.style_color_id, label: color.display_name || color.color_name, hint: color.color_code })), [colors]);
+  const sizeOptions = useMemo(() => sizes.map((size) => ({ value: size.style_size_id, label: size.size_name, hint: size.size_code })), [sizes]);
   const supportedCrafts = String(selectedStyle?.craft_types || '1,2').split(',').map((value) => value.trim());
   const bothSides = item.print_position === '1,2';
   const imageField = (role, label, hint) => (
@@ -84,13 +97,13 @@ function PurchaseItem({ item, index, catalog, onChange, onRemove, onUpload, uplo
         <input value={item.product_title} onChange={(e) => onChange('product_title', e.target.value)} placeholder="e.g. Custom Print T-Shirt" required />
       </div>
       <div className="purchase-grid three">
-        <div className="purchase-field"><label>Style *</label><select value={item.style_id} onChange={(e) => onChange('style_id', e.target.value)} required><option value="">— Select Style —</option>{catalog.styles.map((style) => <option key={style.style_id} value={style.style_id}>{style.style_name} ({style.style_no})</option>)}</select></div>
-        <div className="purchase-field"><label>Color *</label><select value={item.style_color_id} onChange={(e) => onChange('style_color_id', e.target.value)} disabled={!item.style_id} required><option value="">— Select Color —</option>{colors.map((color) => <option key={color.style_color_id} value={color.style_color_id}>{color.display_name || color.color_name} ({color.color_code})</option>)}</select></div>
-        <div className="purchase-field"><label>Size *</label><select value={item.style_size_id} onChange={(e) => onChange('style_size_id', e.target.value)} disabled={!item.style_id} required><option value="">— Select Size —</option>{sizes.map((size) => <option key={size.style_size_id} value={size.style_size_id}>{size.size_name} ({size.size_code})</option>)}</select></div>
+        <div className="purchase-field"><label>Style *</label><SearchSelect value={item.style_id} options={styleOptions} placeholder="— Search style name or number —" onChange={(value) => onChange('style_id', value)} /></div>
+        <div className="purchase-field"><label>Color *</label><SearchSelect value={item.style_color_id} options={colorOptions} placeholder={item.style_id ? '— Select Color —' : '— Select a style first —'} disabled={!item.style_id} onChange={(value) => onChange('style_color_id', value)} /></div>
+        <div className="purchase-field"><label>Size *</label><SearchSelect value={item.style_size_id} options={sizeOptions} placeholder={item.style_id ? '— Select Size —' : '— Select a style first —'} disabled={!item.style_id} onChange={(value) => onChange('style_size_id', value)} /></div>
       </div>
       {selectedStyle && <div className="supplier-style-preview">
         {selectedStyle.images?.[0] ? <img src={selectedStyle.images[0]} alt={selectedStyle.style_name} /> : <div className="supplier-style-placeholder">👕</div>}
-        <div><b>{selectedStyle.style_name}</b><span>Supplier style: {selectedStyle.style_no}</span><small>{selectedStyle.raw_name !== selectedStyle.style_name ? selectedStyle.raw_name : 'Live RIIN catalog item'} · SKU: {selectedStyle.style_no}-COLOR-SIZE</small></div>
+        <div><b>{selectedStyle.style_name}</b><span>Supplier style: {selectedStyle.style_no}</span><small>{colors.length} colours · {sizes.length} sizes{selectedStyle.color_ids?.length ? '' : ' (supplier-wide palette)'} · SKU: {selectedStyle.style_no}-COLOR-SIZE</small></div>
       </div>}
       <div className="purchase-grid two">
         <div className="purchase-field"><label>Craft Type *</label><select value={item.craft_type} onChange={(e) => onChange('craft_type', e.target.value)}><option value="1" disabled={!supportedCrafts.includes('1')}>Heat Transfer (烫画)</option><option value="2" disabled={!supportedCrafts.includes('2')}>DTG Direct-to-Garment (直喷)</option></select></div>
@@ -132,6 +145,21 @@ export default function Purchase() {
   useEffect(() => {
     api.purchaseCatalog().then(setCatalog).catch((err) => setError(err.message)).finally(() => setLoading(false));
   }, []);
+
+  // A restored draft can hold a colour/size the style no longer offers (the catalog
+  // is re-synced between sessions) — drop those so the item is re-picked from the
+  // style's real palette instead of failing at submit time.
+  useEffect(() => {
+    if (!catalog.styles.length) return;
+    setItems((current) => current.map((item) => {
+      const style = catalog.styles.find((entry) => entry.style_id === item.style_id);
+      if (!style) return item;
+      const colorOk = !style.color_ids?.length || !item.style_color_id || style.color_ids.includes(item.style_color_id);
+      const sizeOk = !style.size_ids?.length || !item.style_size_id || style.size_ids.includes(item.style_size_id);
+      if (colorOk && sizeOk) return item;
+      return { ...item, style_color_id: colorOk ? item.style_color_id : '', style_size_id: sizeOk ? item.style_size_id : '' };
+    }));
+  }, [catalog.styles]);
 
   const setField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));

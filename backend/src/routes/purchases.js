@@ -48,6 +48,32 @@ async function fulfillmentSupplier(supplierId) {
   return rows[0];
 }
 
+// The DIGI/RIIN API only exposes a global colour + size palette, never a per-style
+// one, so a supplier style is narrowed through the curated managed style that carries
+// the same style_no (matched on code, then on name — the same rule the styles page
+// uses). A style with no curated twin, or one whose colours match nothing in the
+// supplier palette, keeps the full palette instead of showing an empty dropdown.
+const colorMatch = `(COALESCE(mc.supplier_color_code,mc.internal_color_code)=c.color_code
+       OR LOWER(mc.display_name)=LOWER(c.display_name) OR LOWER(mc.color_name)=LOWER(c.color_name))`;
+const sizeMatch = `(COALESCE(mz.supplier_size_code,mz.size_code)=z.size_code
+       OR UPPER(mz.size_code)=UPPER(z.size_code) OR UPPER(mz.size_name)=UPPER(z.display_name)
+       OR UPPER(mz.size_name)=UPPER(z.size_name))`;
+
+// `supplier` / `styleCode` are SQL expressions (a column reference or a $n placeholder),
+// never user input — the values themselves always travel as bound parameters.
+const styleColorIdsSql = (supplier, styleCode) => `
+    SELECT ARRAY_AGG(DISTINCT c.supplier_color_id) ids
+      FROM styles ms
+      JOIN style_colors mc ON mc.style_id=ms.style_id AND mc.active=TRUE
+      JOIN supplier_catalog_colors c ON c.supplier_id=${supplier} AND c.active=TRUE AND ${colorMatch}
+     WHERE ms.style_no=${styleCode}`;
+const styleSizeIdsSql = (supplier, styleCode) => `
+    SELECT ARRAY_AGG(DISTINCT z.supplier_size_id) ids
+      FROM styles ms
+      JOIN style_sizes mz ON mz.style_id=ms.style_id AND mz.active=TRUE
+      JOIN supplier_catalog_sizes z ON z.supplier_id=${supplier} AND z.active=TRUE AND ${sizeMatch}
+     WHERE ms.style_no=${styleCode}`;
+
 async function catalogItem(client, item, index, supplierId) {
   const quantity = Number.parseInt(item.quantity, 10);
   const craftType = Number.parseInt(item.craft_type, 10);
@@ -67,6 +93,18 @@ async function catalogItem(client, item, index, supplierId) {
     [item.style_id, item.style_color_id, item.style_size_id, supplierId],
   );
   if (!rows[0]) throw httpError(`Item #${index + 1}: style, color, and size do not match`);
+  // Same narrowing the New Order dropdowns apply — re-checked here so a stale draft
+  // can never submit a colour or size the selected style does not actually come in.
+  const limits = (await client.query(
+    `SELECT (${styleColorIdsSql('$1', '$2')}) color_ids, (${styleSizeIdsSql('$1', '$2')}) size_ids`,
+    [supplierId, rows[0].style_no],
+  )).rows[0] || {};
+  if (limits.color_ids?.length && !limits.color_ids.includes(item.style_color_id)) {
+    throw httpError(`Item #${index + 1}: ${rows[0].color_name || rows[0].color_code} is not available for style ${rows[0].style_no}`);
+  }
+  if (limits.size_ids?.length && !limits.size_ids.includes(item.style_size_id)) {
+    throw httpError(`Item #${index + 1}: size ${rows[0].size_name || rows[0].size_code} is not available for style ${rows[0].style_no}`);
+  }
   const supportedCrafts = String(rows[0].craft_types || '').split(',').map(Number).filter(Number.isInteger);
   if (supportedCrafts.length && !supportedCrafts.includes(craftType)) throw httpError(`Item #${index + 1}: selected style does not support that craft type`);
   const position = optionalText(item.print_position, 10);
@@ -120,9 +158,13 @@ router.get('/catalog', wrap(async (_req, res) => {
     query(`SELECT supplier_id,supplier_code,supplier_name,api_available,api_provider,website,
                   (api_available=TRUE AND UPPER(COALESCE(api_provider,''))='RIIN') can_place_order
              FROM suppliers WHERE default_status='Active' ORDER BY supplier_name`),
-    query(`SELECT supplier_style_id style_id,supplier_id,style_code style_no,display_name style_name,
-                  style_name raw_name,craft_types,images,price_mode,last_synced_at
-             FROM supplier_catalog_styles WHERE active=TRUE AND enabled=TRUE ORDER BY supplier_id,display_name,style_code`),
+    query(`SELECT s.supplier_style_id style_id,s.supplier_id,s.style_code style_no,s.display_name style_name,
+                  s.style_name raw_name,s.craft_types,s.images,s.price_mode,s.last_synced_at,
+                  COALESCE(cids.ids,'{}') color_ids,COALESCE(zids.ids,'{}') size_ids
+             FROM supplier_catalog_styles s
+             LEFT JOIN LATERAL (${styleColorIdsSql('s.supplier_id', 's.style_code')}) cids ON TRUE
+             LEFT JOIN LATERAL (${styleSizeIdsSql('s.supplier_id', 's.style_code')}) zids ON TRUE
+            WHERE s.active=TRUE AND s.enabled=TRUE ORDER BY s.supplier_id,s.display_name,s.style_code`),
     query(`SELECT supplier_color_id style_color_id,supplier_id,color_code,display_name color_name,
                   display_name,color_name raw_name,last_synced_at
              FROM supplier_catalog_colors WHERE active=TRUE ORDER BY supplier_id,display_name,color_code`),
