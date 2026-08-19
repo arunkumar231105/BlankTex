@@ -10,6 +10,13 @@ function Info({ k, v }) {
   return <div className="info-row"><span className="k">{k}</span><span className="v">{v ?? '—'}</span></div>;
 }
 
+function fabricWeightLabel(style) {
+  const parts = [];
+  if (style.fabric_weight_gsm != null && style.fabric_weight_gsm !== '') parts.push(`${style.fabric_weight_gsm} GSM`);
+  if (style.fabric_weight_oz != null && style.fabric_weight_oz !== '') parts.push(`${style.fabric_weight_oz} oz`);
+  return parts.length ? parts.join(' / ') : null;
+}
+
 export default function StylePreview({ detail, loading }) {
   const navigate = useNavigate();
   const [activeImg, setActiveImg] = useState(0);
@@ -60,7 +67,7 @@ export default function StylePreview({ detail, loading }) {
             <Info k="Neck" v={s.neck_type} />
             <Info k="Sleeve" v={s.sleeve_type} />
             <Info k="Fabric" v={s.fabric_composition ? <span className="fabric-val">{s.fabric_composition}</span> : null} />
-            <Info k="Fabric Weight" v={s.fabric_weight_oz ? `${s.fabric_weight_oz} oz / ${s.fabric_weight_gsm ?? '—'} g` : null} />
+            <Info k="Fabric Weight" v={fabricWeightLabel(s)} />
             <Info k="Fabric Type" v={s.fabric_type} />
             {s.supplier_catalog && <Info k="Original Name" v={s.raw_style_name} />}
             {s.supplier_catalog && <Info k="Craft Types" v={String(s.craft_types || '').split(',').map((v) => v === '1' ? 'Heat Transfer' : v === '2' ? 'DTG' : v).join(', ')} />}

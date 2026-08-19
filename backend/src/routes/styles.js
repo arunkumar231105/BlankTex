@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db.js';
 import { wrap } from './crud.js';
+import { fabricWeightGsmForStyle } from '../digiFabricWeights.js';
 
 const router = Router();
 
@@ -315,7 +316,11 @@ router.get('/:id', wrap(async (req, res) => {
     // The DIGI/RIIN API only exposes a global colour+size palette, not per-style.
     // When this supplier style matches a curated managed style, show that style's
     // actual colours/sizes; otherwise fall back to the supplier-wide palette.
-    const managed = (await query('SELECT style_id FROM styles WHERE style_no=$1 LIMIT 1', [supplierStyle.style_code])).rows[0];
+    const managed = (await query(
+      `SELECT style_id, fabric_composition, fabric_weight_gsm, fabric_weight_oz, fabric_type
+         FROM styles WHERE UPPER(style_no)=UPPER($1) LIMIT 1`,
+      [supplierStyle.style_code],
+    )).rows[0];
     const [colors, sizes] = managed ? await Promise.all([
       query(`SELECT style_color_id, supplier_color_code, internal_color_code, display_name, color_name,
                     COALESCE(hex_color,'#d7dce5') hex_color, active, discontinued
@@ -346,6 +351,14 @@ router.get('/:id', wrap(async (req, res) => {
       alt_text: supplierStyle.display_name,
       is_primary: index === 0,
     }));
+    const fabricWeightGsm = managed?.fabric_weight_gsm != null
+      ? Number(managed.fabric_weight_gsm)
+      : fabricWeightGsmForStyle(
+          supplierStyle.style_code,
+          supplierStyle.style_name,
+          supplierStyle.display_name,
+          supplierStyle.raw_data?.styleName,
+        );
     return res.json({
       style_id: supplierStyle.supplier_style_id,
       supplier_catalog: true,
@@ -356,6 +369,10 @@ router.get('/:id', wrap(async (req, res) => {
       short_name: supplierStyle.style_code,
       garment_category: 'Supplier Catalog',
       garment_type: supplierStyle.display_name,
+      fabric_composition: managed?.fabric_composition ?? null,
+      fabric_weight_gsm: fabricWeightGsm,
+      fabric_weight_oz: managed?.fabric_weight_oz != null ? Number(managed.fabric_weight_oz) : null,
+      fabric_type: managed?.fabric_type ?? null,
       craft_types: supplierStyle.craft_types,
       price_mode: supplierStyle.price_mode,
       product_status: 'Active', active: true, discontinued: false, is_featured: false,

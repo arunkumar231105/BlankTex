@@ -27,6 +27,15 @@ const ZH_EN = {
   '麻灰':'Linen Gray','铁灰':'Iron Gray','炭灰':'Charcoal','烟灰':'Smoke Gray','银灰':'Silver Gray',
   '翠绿':'Emerald','草绿':'Grass Green','果绿':'Apple Green','橄榄绿':'Olive Green','森林绿':'Forest Green',
   '砖红':'Brick Red','枣红':'Maroon','暗红':'Dark Red','粉红':'Pink','桔色':'Orange','金色':'Gold','银色':'Silver',
+  '亮红/大红/深红':'Bright Red / Red / Dark Red','湖绿色':'Aqua Green','紫红色':'Azalea','黄棕色':'Brown Savana',
+  '木炭色':'Charcoal','深褐色':'Chocolate','雏菊色':'Daisy','巧克力色':'Dark Chocolate','浓咖色':'Espresso',
+  '金黄色':'Gold','碳灰':'Graphite Heather','石南灰':'Heather Grey','重金属':'Heavy Metal','火鹤红':'Heliconia',
+  '爱尔兰绿':'Irish Green','象牙白':'Ivory','淡绿色':'Kiwi','淡粉色':'Light Pink','青柠色':'Lime','栗色':'Maroon',
+  '午夜蓝':'Midnight Navy','混色':'Mixed','苔绿色':'Moss','自然色':'Natural','海军色':'Navy','兰花紫':'Orchid',
+  '豆绿色':'Pea Green','黑胡椒色':'Pepper','粉蓝':'Powder Blue','玫瑰粉':'Rose Pink','亮蓝色':'Royal Blue',
+  '轻粉色':'Safety Pink','鼠尾草绿':'Sage','沙色':'Sand','砂岩色':'Sandstone','海泡绿':'Seafoam','柔粉':'Soft Pink',
+  '运动灰':'Sport Grey','草皮绿':'Turf Green','紫罗兰':'Violet','红紫色':'Yam','黄雾色':'Yellow Haze',
+  '大红色':'Red','大红':'Red','杏':'Apricot','黑':'Black','白':'White','棕':'Brown','灰':'Grey','粉':'Pink','紫':'Purple',
   '均码':'One Size','加大':'Plus Size','大码':'Large','小码':'Small',
 };
 
@@ -34,6 +43,22 @@ export function translateSupplierText(value) {
   if (!value || !/[\u4e00-\u9fff]/.test(value)) return value || '';
   let translated = value;
   for (const key of Object.keys(ZH_EN).sort((a,b) => b.length-a.length)) translated = translated.split(key).join(ZH_EN[key]);
+  return translated;
+}
+
+function titleCaseCode(value) {
+  return String(value || '').trim().toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
+// Prefer the supplier's translated name. If their text is still partly Chinese
+// but the color code itself is a descriptive English name (POWDER BLUE, MAROON,
+// etc.), that code is a safer exact display label than leaking a mixed-language
+// value such as "淡Pink".
+export function supplierColorDisplayName(row) {
+  const translated = translateSupplierText(row?.colorName);
+  if (!/[\u4e00-\u9fff]/.test(translated)) return translated;
+  const code = String(row?.colorCode || '').trim();
+  if (/^[a-z]+(?:[ -][a-z]+)*$/i.test(code)) return titleCaseCode(code);
   return translated;
 }
 
@@ -60,7 +85,7 @@ export async function syncRiinCatalog(supplierId) {
     await client.query('UPDATE supplier_catalog_colors SET active=FALSE WHERE supplier_id=$1',[supplierId]);
     await client.query('UPDATE supplier_catalog_sizes SET active=FALSE WHERE supplier_id=$1',[supplierId]);
     for (const row of styles) await client.query(`INSERT INTO supplier_catalog_styles (supplier_id,style_code,style_name,display_name,craft_types,images,price_mode,raw_data,active,last_synced_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,TRUE,NOW()) ON CONFLICT (supplier_id,style_code) DO UPDATE SET style_name=EXCLUDED.style_name,display_name=EXCLUDED.display_name,craft_types=EXCLUDED.craft_types,images=EXCLUDED.images,price_mode=EXCLUDED.price_mode,raw_data=EXCLUDED.raw_data,active=TRUE,last_synced_at=NOW()`,[supplierId,row.styleCode,row.styleName,translateSupplierText(row.styleName),String(row.craftType||''),JSON.stringify(images(row.images)),row.priceMode??null,row]);
-    for (const row of colors) await client.query(`INSERT INTO supplier_catalog_colors (supplier_id,color_code,color_name,display_name,raw_data,active,last_synced_at) VALUES ($1,$2,$3,$4,$5,TRUE,NOW()) ON CONFLICT (supplier_id,color_code) DO UPDATE SET color_name=EXCLUDED.color_name,display_name=EXCLUDED.display_name,raw_data=EXCLUDED.raw_data,active=TRUE,last_synced_at=NOW()`,[supplierId,row.colorCode,row.colorName,translateSupplierText(row.colorName),row]);
+    for (const row of colors) await client.query(`INSERT INTO supplier_catalog_colors (supplier_id,color_code,color_name,display_name,raw_data,active,last_synced_at) VALUES ($1,$2,$3,$4,$5,TRUE,NOW()) ON CONFLICT (supplier_id,color_code) DO UPDATE SET color_name=EXCLUDED.color_name,display_name=EXCLUDED.display_name,raw_data=EXCLUDED.raw_data,active=TRUE,last_synced_at=NOW()`,[supplierId,row.colorCode,row.colorName,supplierColorDisplayName(row),row]);
     for (const row of sizes) await client.query(`INSERT INTO supplier_catalog_sizes (supplier_id,size_code,size_name,display_name,raw_data,active,last_synced_at) VALUES ($1,$2,$3,$4,$5,TRUE,NOW()) ON CONFLICT (supplier_id,size_code) DO UPDATE SET size_name=EXCLUDED.size_name,display_name=EXCLUDED.display_name,raw_data=EXCLUDED.raw_data,active=TRUE,last_synced_at=NOW()`,[supplierId,row.sizeCode,row.sizeName,translateSupplierText(row.sizeName),row]);
     await client.query('COMMIT');
     return {styles:styles.length,colors:colors.length,sizes:sizes.length};

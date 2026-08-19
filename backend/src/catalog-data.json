@@ -11718,11 +11718,11 @@
         },
         {
           "supplier_color_code": "GREY",
-          "color_name": "Grey",
-          "display_name": "Grey",
+          "color_name": "Light Grey",
+          "display_name": "Light Grey",
           "internal_color_code": "GREY",
           "sort_order": 4,
-          "hex_color": "#9CA3AF"
+          "hex_color": "#D1D5DB"
         },
         {
           "supplier_color_code": "NAVY",

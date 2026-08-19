@@ -53,20 +53,47 @@ async function fulfillmentSupplier(supplierId) {
 // the same style_no (matched on code, then on name — the same rule the styles page
 // uses). A style with no curated twin, or one whose colours match nothing in the
 // supplier palette, keeps the full palette instead of showing an empty dropdown.
-const colorMatch = `(COALESCE(mc.supplier_color_code,mc.internal_color_code)=c.color_code
-       OR LOWER(mc.display_name)=LOWER(c.display_name) OR LOWER(mc.color_name)=LOWER(c.color_name))`;
 const sizeMatch = `(COALESCE(mz.supplier_size_code,mz.size_code)=z.size_code
        OR UPPER(mz.size_code)=UPPER(z.size_code) OR UPPER(mz.size_name)=UPPER(z.display_name)
        OR UPPER(mz.size_name)=UPPER(z.size_name))`;
 
 // `supplier` / `styleCode` are SQL expressions (a column reference or a $n placeholder),
 // never user input — the values themselves always travel as bound parameters.
-const styleColorIdsSql = (supplier, styleCode) => `
-    SELECT ARRAY_AGG(DISTINCT c.supplier_color_id) ids
+const matchedStyleColorsSql = (supplier, styleCode) => `
+    SELECT c.supplier_color_id, c.color_code supplier_color_code,
+           mc.display_name, mc.color_name, mc.sort_order
       FROM styles ms
       JOIN style_colors mc ON mc.style_id=ms.style_id AND mc.active=TRUE
-      JOIN supplier_catalog_colors c ON c.supplier_id=${supplier} AND c.active=TRUE AND ${colorMatch}
-     WHERE ms.style_no=${styleCode}`;
+      JOIN LATERAL (
+        SELECT candidate.*
+          FROM supplier_catalog_colors candidate
+         WHERE candidate.supplier_id=${supplier} AND candidate.active=TRUE
+           AND (
+             UPPER(COALESCE(mc.supplier_color_code,mc.internal_color_code))=UPPER(candidate.color_code)
+             OR LOWER(mc.display_name)=LOWER(candidate.display_name)
+             OR LOWER(mc.color_name)=LOWER(candidate.color_name)
+           )
+         ORDER BY
+           (UPPER(COALESCE(mc.supplier_color_code,mc.internal_color_code))=UPPER(candidate.color_code)) DESC,
+           candidate.color_code
+         LIMIT 1
+      ) c ON TRUE
+     WHERE UPPER(ms.style_no)=UPPER(${styleCode})`;
+
+// One supplier color per curated style color. An exact supplier code always wins;
+// name matching is only the fallback. This prevents e.g. DG001's BU01 Blue from
+// also pulling in the supplier-wide BLUE record.
+const styleColorIdsSql = (supplier, styleCode) => `
+    SELECT ARRAY_AGG(m.supplier_color_id ORDER BY m.sort_order,m.display_name) ids
+      FROM (${matchedStyleColorsSql(supplier, styleCode)}) m`;
+const styleColorsSql = (supplier, styleCode) => `
+    SELECT JSONB_AGG(JSONB_BUILD_OBJECT(
+             'style_color_id',m.supplier_color_id,
+             'display_name',m.display_name,
+             'color_name',m.color_name,
+             'color_code',m.supplier_color_code
+           ) ORDER BY m.sort_order,m.display_name) colors
+      FROM (${matchedStyleColorsSql(supplier, styleCode)}) m`;
 const styleSizeIdsSql = (supplier, styleCode) => `
     SELECT ARRAY_AGG(DISTINCT z.supplier_size_id) ids
       FROM styles ms
@@ -94,11 +121,18 @@ async function catalogItem(client, item, index, supplierId) {
   const { rows } = await client.query(
     `SELECT s.supplier_style_id AS style_id, s.style_code AS style_no, s.display_name AS style_name,
             s.craft_types, c.supplier_color_id AS style_color_id, c.color_code,
-            c.display_name AS color_name, z.supplier_size_id AS style_size_id,
+            COALESCE(canonical_color.display_name,c.display_name) AS color_name,
+            z.supplier_size_id AS style_size_id,
             z.size_code, z.display_name AS size_name
        FROM supplier_catalog_styles s
        JOIN supplier_catalog_colors c ON c.supplier_id = s.supplier_id
        JOIN supplier_catalog_sizes z ON z.supplier_id = s.supplier_id
+       LEFT JOIN LATERAL (
+         SELECT matched.display_name
+           FROM (${matchedStyleColorsSql('s.supplier_id', 's.style_code')}) matched
+          WHERE matched.supplier_color_id=c.supplier_color_id
+          LIMIT 1
+       ) canonical_color ON TRUE
       WHERE s.supplier_style_id = $1 AND c.supplier_color_id = $2 AND z.supplier_size_id = $3
         AND s.supplier_id = $4 AND c.supplier_id = $4 AND z.supplier_id = $4
         AND s.active = TRUE AND s.enabled = TRUE AND c.active = TRUE AND z.active = TRUE`,
@@ -172,10 +206,12 @@ router.get('/catalog', wrap(async (_req, res) => {
              FROM suppliers WHERE default_status='Active' ORDER BY supplier_name`),
     query(`SELECT s.supplier_style_id style_id,s.supplier_id,s.style_code style_no,s.display_name style_name,
                   s.style_name raw_name,s.craft_types,s.images,s.price_mode,s.last_synced_at,
-                  COALESCE(cids.ids,'{}') color_ids,COALESCE(zids.ids,'{}') size_ids,
+                  COALESCE(cids.ids,'{}') color_ids,COALESCE(cols.colors,'[]'::jsonb) colors,
+                  COALESCE(zids.ids,'{}') size_ids,
                   COALESCE(wts.weights,'{}'::jsonb) size_weights
              FROM supplier_catalog_styles s
              LEFT JOIN LATERAL (${styleColorIdsSql('s.supplier_id', 's.style_code')}) cids ON TRUE
+             LEFT JOIN LATERAL (${styleColorsSql('s.supplier_id', 's.style_code')}) cols ON TRUE
              LEFT JOIN LATERAL (${styleSizeIdsSql('s.supplier_id', 's.style_code')}) zids ON TRUE
              LEFT JOIN LATERAL (${styleSizeWeightsSql('s.supplier_id', 's.style_code')}) wts ON TRUE
             WHERE s.active=TRUE AND s.enabled=TRUE ORDER BY s.supplier_id,s.display_name,s.style_code`),

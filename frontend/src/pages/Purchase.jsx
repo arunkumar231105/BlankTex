@@ -85,6 +85,7 @@ function PurchaseItem({ item, index, catalog, onChange, onRemove, onUpload, uplo
   // supplier gives no per-style breakdown (color_ids empty) we keep the full
   // supplier palette rather than leaving the dropdown empty.
   const colors = useMemo(() => {
+    if (selectedStyle?.colors?.length) return selectedStyle.colors;
     const allowed = selectedStyle?.color_ids || [];
     return allowed.length ? catalog.colors.filter((color) => allowed.includes(color.style_color_id)) : catalog.colors;
   }, [catalog.colors, selectedStyle]);
