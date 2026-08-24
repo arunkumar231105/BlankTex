@@ -558,6 +558,7 @@ h1,h2,h3,h4 { margin: 0; }
 /* Price highlighting + contained long fabric description */
 .price-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: 999px; background: #e7f7ee; color: #0a7d3f; font-weight: 800; font-size: 13px; letter-spacing: .01em; }
 .price-inline { color: #0a7d3f; font-weight: 800; }
+.price-unavailable { color: var(--muted2); font-size: 11px; white-space: nowrap; }
 .clickable-row { cursor: pointer; }
 .clickable-row:hover { background: #f6f8fc; }
 .sup-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }

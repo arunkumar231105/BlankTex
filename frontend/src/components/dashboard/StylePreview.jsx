@@ -17,6 +17,12 @@ function fabricWeightLabel(style) {
   return parts.length ? parts.join(' / ') : null;
 }
 
+function garmentWeightLabel(grams) {
+  if (grams == null || grams === '') return '—';
+  const value = Number(grams);
+  return value >= 1000 ? `${(value / 1000).toFixed(2)} kg` : `${Number.isInteger(value) ? value : value.toFixed(1)} g`;
+}
+
 export default function StylePreview({ detail, loading }) {
   const navigate = useNavigate();
   const [activeImg, setActiveImg] = useState(0);
@@ -35,6 +41,12 @@ export default function StylePreview({ detail, loading }) {
   const emoji = CAT_EMOJI[s.garment_category] || '👕';
   const active = s.active && !s.discontinued;
   const money = (n) => `$${Number(n).toFixed(2)}`;
+  const sizePrice = (size) => {
+    const lo = size.price_min ?? size.price;
+    const hi = size.price_max ?? size.price;
+    if (lo == null) return null;
+    return Number(lo) === Number(hi) ? money(lo) : `${money(lo)} – ${money(hi)}`;
+  };
   const priceLabel = s.price_min != null
     ? (Number(s.price_min) === Number(s.price_max) ? money(s.price_min) : `${money(s.price_min)} – ${money(s.price_max)}`)
     : null;
@@ -159,14 +171,15 @@ export default function StylePreview({ detail, loading }) {
             ? (
               <div className="tbl-wrap">
                 <table className="tbl">
-                  <thead><tr><th>Size</th><th>Chest (cm)</th><th>Length (cm)</th><th>Price</th><th>SKUs</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Size</th><th>Chest (cm)</th><th>Length (cm)</th><th>Weight</th><th>Price</th><th>SKUs</th><th>Status</th></tr></thead>
                   <tbody>
                     {s.sizes.map((z) => (
                       <tr key={z.style_size_id}>
                         <td style={{ fontWeight: 600 }}>{z.size_code}</td>
                         <td>{z.chest_circumference ?? z.chest_width ?? '—'}</td>
                         <td>{z.body_length ?? z.pants_length ?? '—'}</td>
-                        <td>{z.price != null ? <b className="price-inline">{money(z.price)}</b> : '—'}</td>
+                        <td>{garmentWeightLabel(z.garment_weight_g ?? z.weight)}</td>
+                        <td>{sizePrice(z) ? <b className="price-inline">{sizePrice(z)}</b> : <span className="price-unavailable">Not supplied</span>}</td>
                         <td>{z.sku_count}</td>
                         <td><span className={`badge ${z.active ? 'green' : 'grey'}`}>{z.active ? 'Active' : 'Inactive'}</span></td>
                       </tr>

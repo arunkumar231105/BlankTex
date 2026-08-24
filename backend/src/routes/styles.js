@@ -326,8 +326,24 @@ router.get('/:id', wrap(async (req, res) => {
                     COALESCE(hex_color,'#d7dce5') hex_color, active, discontinued
                FROM style_colors WHERE style_id=$1 AND active=TRUE ORDER BY sort_order, color_name`, [managed.style_id]),
       query(`SELECT ss.style_size_id, ss.size_code, ss.size_name, TRUE active, FALSE discontinued,
+                    sp.chest_width, sp.chest_circumference, sp.waist_circumference,
+                    sp.hip_circumference, sp.body_length, sp.pants_length,
+                    sp.inseam_length, sp.sleeve_length, sp.shoulder_width,
+                    sp.garment_weight_g, sp.measurement_unit,
+                    prices.price_min, prices.price_max,
                     (SELECT COUNT(*)::int FROM style_color_sizes sc WHERE sc.style_size_id=ss.style_size_id) sku_count
-               FROM style_sizes ss WHERE ss.style_id=$1 AND ss.active=TRUE ORDER BY ss.display_order`, [managed.style_id]),
+               FROM style_sizes ss
+               LEFT JOIN style_size_specs sp ON sp.style_size_id=ss.style_size_id
+               LEFT JOIN LATERAL (
+                 SELECT MIN(p.cost_price) price_min, MAX(p.cost_price) price_max
+                   FROM style_color_sizes sku
+                   JOIN supplier_sku_prices p ON p.sku_id=sku.sku_id
+                  WHERE sku.style_size_id=ss.style_size_id AND p.supplier_id=$2
+                    AND p.active=TRUE AND p.effective_from<=CURRENT_DATE
+                    AND (p.effective_to IS NULL OR p.effective_to>=CURRENT_DATE)
+               ) prices ON TRUE
+              WHERE ss.style_id=$1 AND ss.active=TRUE ORDER BY ss.display_order`,
+        [managed.style_id, supplierStyle.supplier_id]),
     ]) : await Promise.all([
       query(`SELECT c.supplier_color_id style_color_id,c.color_code supplier_color_code,
                     c.color_code internal_color_code,c.display_name,c.color_name,
@@ -341,6 +357,12 @@ router.get('/:id', wrap(async (req, res) => {
               WHERE c.supplier_id=$1 AND c.active=TRUE ORDER BY c.display_name,c.color_code`, [supplierStyle.supplier_id]),
       query(`SELECT z.supplier_size_id style_size_id,z.size_code,z.display_name size_name,
                     TRUE active,FALSE discontinued,
+                    NULL::numeric chest_width, NULL::numeric chest_circumference,
+                    NULL::numeric waist_circumference, NULL::numeric hip_circumference,
+                    NULL::numeric body_length, NULL::numeric pants_length,
+                    NULL::numeric inseam_length, NULL::numeric sleeve_length,
+                    NULL::numeric shoulder_width, NULL::numeric garment_weight_g,
+                    NULL::varchar measurement_unit, NULL::numeric price_min, NULL::numeric price_max,
                     (SELECT COUNT(*)::int FROM supplier_catalog_colors c WHERE c.supplier_id=z.supplier_id AND c.active) sku_count
                FROM supplier_catalog_sizes z
               WHERE z.supplier_id=$1 AND z.active=TRUE ORDER BY z.display_name,z.size_code`, [supplierStyle.supplier_id]),
@@ -359,6 +381,8 @@ router.get('/:id', wrap(async (req, res) => {
           supplierStyle.display_name,
           supplierStyle.raw_data?.styleName,
         );
+    const sizePrices = sizes.rows.flatMap((size) => [size.price_min, size.price_max])
+      .filter((price) => price != null).map(Number);
     return res.json({
       style_id: supplierStyle.supplier_style_id,
       supplier_catalog: true,
@@ -380,6 +404,8 @@ router.get('/:id', wrap(async (req, res) => {
       supplier_name: supplierStyle.supplier_name, supplier_code: supplierStyle.supplier_code,
       supplier_lead_time: supplierStyle.supplier_lead_time, supplier_moq: supplierStyle.supplier_moq,
       supplier_currency: supplierStyle.supplier_currency,
+      price_min: sizePrices.length ? Math.min(...sizePrices) : null,
+      price_max: sizePrices.length ? Math.max(...sizePrices) : null,
       colors: colors.rows, sizes: sizes.rows, images,
     });
   }
