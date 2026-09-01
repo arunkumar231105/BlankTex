@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { useToast } from '../ui/Toast.jsx';
 import { useNavigate } from 'react-router-dom';
 import usePersistentState, { clearPersistentState } from '../hooks/usePersistentState.js';
+import { COUNTRIES, statesForCountry } from '../lib/geo.js';
 import SearchSelect from '../ui/SearchSelect.jsx';
 
 const DRAFT_FORM_KEY = 'blanktex_new_order_form';
@@ -287,9 +288,25 @@ export default function Purchase() {
     return '';
   };
 
+  const validateForm = () => {
+    const digits = (value) => String(value || '').replace(/\D/g, '');
+    if (!form.order_no.trim()) return 'Order ID is required';
+    if (!form.order_time) return 'Order time is required';
+    if (!form.recipient_name.trim()) return 'Recipient full name is required';
+    if (!form.phone.trim()) return 'Phone number is required';
+    if (digits(form.phone).length < 7) return 'Enter a valid phone number';
+    if (!form.address_line_1.trim()) return 'Address Line 1 is required';
+    if (!form.city.trim()) return 'City is required';
+    if (!form.state_province.trim()) return 'State / Province is required';
+    if (!form.postal_code.trim()) return 'ZIP / Postal code is required';
+    if (form.country === 'US' && !/^\d{5}(-\d{4})?$/.test(form.postal_code.trim())) return 'Enter a valid US ZIP code (e.g. 90210 or 90210-1234)';
+    if (!form.country) return 'Country is required';
+    return '';
+  };
+
   const submit = async (event) => {
     event.preventDefault();
-    const validationError = validateItems();
+    const validationError = validateItems() || validateForm();
     if (validationError) return toast.error(validationError);
     setSubmitting(true);
     try {
@@ -351,9 +368,11 @@ export default function Purchase() {
           <div className="purchase-field full"><label>Address Line 1 *</label><input value={form.address_line_1} onChange={(e) => setField('address_line_1', e.target.value)} required /></div>
           <div className="purchase-field full"><label>Address Line 2</label><input value={form.address_line_2} onChange={(e) => setField('address_line_2', e.target.value)} /></div>
           <div className="purchase-field"><label>City *</label><input value={form.city} onChange={(e) => setField('city', e.target.value)} required /></div>
-          <div className="purchase-field"><label>State / Province *</label><input value={form.state_province} onChange={(e) => setField('state_province', e.target.value)} required /></div>
+          <div className="purchase-field"><label>State / Province *</label>{statesForCountry(form.country)
+            ? <select value={form.state_province} onChange={(e) => setField('state_province', e.target.value)} required><option value="">— Select State —</option>{statesForCountry(form.country).map(([code, name]) => <option key={code} value={code}>{name} ({code})</option>)}</select>
+            : <input value={form.state_province} onChange={(e) => setField('state_province', e.target.value)} placeholder="State / Province" required />}</div>
           <div className="purchase-field"><label>ZIP Code *</label><input value={form.postal_code} onChange={(e) => setField('postal_code', e.target.value)} required /></div>
-          <div className="purchase-field"><label>Country *</label><input value={form.country} onChange={(e) => setField('country', e.target.value)} required /></div>
+          <div className="purchase-field"><label>Country *</label><select value={form.country} onChange={(e) => setForm((current) => ({ ...current, country: e.target.value, state_province: '' }))} required>{COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name} ({code})</option>)}</select></div>
         </div></Section>
 
         <Section number="4" title="Items">
