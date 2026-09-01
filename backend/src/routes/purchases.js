@@ -302,7 +302,7 @@ router.post('/sync', wrap(async (req, res) => {
     const result = await supplierPost('/trade/api/interface/queryOrderStatus', { platformOidList: batch });
     for (const item of result.data || []) {
       await query(`UPDATE purchases SET supplier_status=$1,supplier_status_str=$2,status='Placed',submission_status='Submitted',synced_at=NOW(),last_sync_error=NULL WHERE order_no=$3`,
-        [item.orderStatus, item.orderStateStr || SUPPLIER_STATUSES[item.orderStatus] || '', item.platformOid]);
+        [item.orderStatus, SUPPLIER_STATUSES[item.orderStatus] || item.orderStateStr || '', item.platformOid]);
       updated += 1;
     }
   }
@@ -320,7 +320,7 @@ router.post('/import', wrap(async (req, res) => {
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'Placed',$12,$13,$14,$15,$16,NOW(),$17,'Submitted')
     ON CONFLICT (order_no) DO UPDATE SET carrier=EXCLUDED.carrier,recipient_name=EXCLUDED.recipient_name,phone=EXCLUDED.phone,address_line_1=EXCLUDED.address_line_1,address_line_2=EXCLUDED.address_line_2,city=EXCLUDED.city,state_province=EXCLUDED.state_province,postal_code=EXCLUDED.postal_code,country=EXCLUDED.country,supplier_status=EXCLUDED.supplier_status,supplier_status_str=EXCLUDED.supplier_status_str,goods_count=EXCLUDED.goods_count,supplier_payload=EXCLUDED.supplier_payload,supplier_id=EXCLUDED.supplier_id,submission_status='Submitted',synced_at=NOW()
     RETURNING purchase_id,order_no`,
-    [order.platformOid, order.deliveryCourier || null, order.orderTime || new Date(), order.consigneeName || 'Unknown', order.phone || '', order.address || '', order.addressOptional || null, order.receiverCity || '', order.receiverProvince || '', order.postCode || '', order.receiverCountry || 'US', req.user?.user_id || null, order.orderStatus || 2, order.orderStateStr || SUPPLIER_STATUSES[order.orderStatus] || 'Pending Push', order.goodsList?.length || order.goodsTotalQty || 0, order, supplier.supplier_id]);
+    [order.platformOid, order.deliveryCourier || null, order.orderTime || new Date(), order.consigneeName || 'Unknown', order.phone || '', order.address || '', order.addressOptional || null, order.receiverCity || '', order.receiverProvince || '', order.postCode || '', order.receiverCountry || 'US', req.user?.user_id || null, order.orderStatus || 2, SUPPLIER_STATUSES[order.orderStatus] || order.orderStateStr || 'Pending Push', order.goodsList?.length || order.goodsTotalQty || 0, order, supplier.supplier_id]);
   res.json({ success: true, ...rows[0] });
 }));
 

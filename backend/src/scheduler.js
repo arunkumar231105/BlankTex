@@ -31,3 +31,29 @@ export function startStockScheduler() {
   setInterval(run, intervalMs);
   console.log(`S&S stock scheduler active — refreshing every ${hours}h.`);
 }
+
+// Periodically sync order statuses from the supplier so users don't have to
+// click "Sync All". Runs as a detached child process.
+export function startOrderSyncScheduler() {
+  const minutes = Number(process.env.ORDER_SYNC_MINUTES || 60);
+  if (!(minutes > 0)) {
+    console.log('Order-status sync scheduler disabled (ORDER_SYNC_MINUTES <= 0).');
+    return;
+  }
+  const intervalMs = minutes * 60 * 1000;
+
+  const run = () => {
+    const child = spawn(process.execPath, [join(__dirname, 'syncOrderStatuses.js')], {
+      detached: true,
+      stdio: 'ignore',
+      env: process.env,
+    });
+    child.on('error', (error) => console.error('[scheduler] order sync failed to start:', error.message));
+    child.unref();
+  };
+
+  // First run shortly after startup, then every `minutes`.
+  setTimeout(run, 60 * 1000);
+  setInterval(run, intervalMs);
+  console.log(`Order-status sync scheduler active — every ${minutes} min.`);
+}

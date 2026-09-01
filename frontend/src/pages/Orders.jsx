@@ -12,8 +12,10 @@ const STATUSES = {
 const FILTERS = [['', 'All'], ['2', 'Pending'], ['5', 'Production'], ['12', 'Shipped'], ['13', 'Closed']];
 
 function Status({ value, text }) {
+  // Prefer the English label mapped from the status code; only fall back to the
+  // supplier's own text (which can be Chinese) for unknown codes.
   const status = STATUSES[value] || [text || 'Unknown', 'grey'];
-  return <span className={`badge ${status[1]}`}>{text || status[0]}</span>;
+  return <span className={`badge ${status[1]}`}>{status[0]}</span>;
 }
 function SubmissionStatus({ value }) {
   const type = value === 'Submitted' ? 'green' : value === 'Failed' ? 'red' : 'amber';
