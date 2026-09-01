@@ -372,7 +372,7 @@ export default function Purchase() {
             ? <select value={form.state_province} onChange={(e) => setField('state_province', e.target.value)} required><option value="">— Select State —</option>{statesForCountry(form.country).map(([code]) => <option key={code} value={code}>{code}</option>)}</select>
             : <input value={form.state_province} onChange={(e) => setField('state_province', e.target.value)} placeholder="State / Province" required />}</div>
           <div className="purchase-field"><label>ZIP Code *</label><input value={form.postal_code} onChange={(e) => setField('postal_code', e.target.value)} required /></div>
-          <div className="purchase-field"><label>Country *</label><select value={form.country} onChange={(e) => setForm((current) => ({ ...current, country: e.target.value, state_province: '' }))} required>{COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name} ({code})</option>)}</select></div>
+          <div className="purchase-field"><label>Country *</label><select value={form.country} onChange={(e) => setForm((current) => ({ ...current, country: e.target.value, state_province: '' }))} required>{COUNTRIES.map(([code]) => <option key={code} value={code}>{code}</option>)}</select></div>
         </div></Section>
 
         <Section number="4" title="Items">
