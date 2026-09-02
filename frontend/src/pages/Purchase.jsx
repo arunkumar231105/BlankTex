@@ -369,7 +369,7 @@ export default function Purchase() {
           <div className="purchase-field full"><label>Address Line 2</label><input value={form.address_line_2} onChange={(e) => setField('address_line_2', e.target.value)} /></div>
           <div className="purchase-field"><label>City *</label><input value={form.city} onChange={(e) => setField('city', e.target.value)} required /></div>
           <div className="purchase-field"><label>State / Province *</label>{statesForCountry(form.country)
-            ? <select value={form.state_province} onChange={(e) => setField('state_province', e.target.value)} required><option value="">— Select State —</option>{statesForCountry(form.country).map(([code]) => <option key={code} value={code}>{code}</option>)}</select>
+            ? <SearchSelect value={form.state_province} options={statesForCountry(form.country).map(([code, name]) => ({ value: code, label: code, hint: name }))} placeholder="— Search state (CA, NY…) —" onChange={(value) => setField('state_province', value)} />
             : <input value={form.state_province} onChange={(e) => setField('state_province', e.target.value)} placeholder="State / Province" required />}</div>
           <div className="purchase-field"><label>ZIP Code *</label><input value={form.postal_code} onChange={(e) => setField('postal_code', e.target.value)} required /></div>
           <div className="purchase-field"><label>Country *</label><select value={form.country} onChange={(e) => setForm((current) => ({ ...current, country: e.target.value, state_province: '' }))} required>{COUNTRIES.map(([code]) => <option key={code} value={code}>{code}</option>)}</select></div>
