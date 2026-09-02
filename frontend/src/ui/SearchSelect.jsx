@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 // searchable too, so "DG001" finds a style just as well as "cotton tee".
 const MAX_VISIBLE = 200;
 
-export default function SearchSelect({ value, options, placeholder = 'Select…', disabled = false, onChange }) {
+export default function SearchSelect({ value, options, placeholder = 'Select…', disabled = false, onChange, hintInValue = true }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [active, setActive] = useState(0);
@@ -15,7 +15,7 @@ export default function SearchSelect({ value, options, placeholder = 'Select…'
   const inputRef = useRef(null);
 
   const selected = options.find((option) => String(option.value) === String(value)) || null;
-  const selectedText = selected ? `${selected.label}${selected.hint ? ` (${selected.hint})` : ''}` : '';
+  const selectedText = selected ? `${selected.label}${hintInValue && selected.hint ? ` (${selected.hint})` : ''}` : '';
 
   const matches = useMemo(() => {
     const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
