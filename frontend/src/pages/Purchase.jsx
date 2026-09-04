@@ -26,6 +26,23 @@ function generateOrderId() {
   return `ORD-${stamp}`;
 }
 
+// Auto-fill from a Printshop sales order matches its line items to this supplier's
+// catalog by name/code. A match must be exact (normalised) — a wrong guess would
+// send the wrong garment to the supplier, so anything uncertain is left blank for
+// the agent to pick, which the required-field validation then enforces.
+const normalizeKey = (value) => String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+function matchCatalog(list, fields, ...candidates) {
+  const wanted = candidates.map(normalizeKey).filter(Boolean);
+  if (!wanted.length) return null;
+  for (const entry of list) {
+    for (const field of fields) {
+      const value = normalizeKey(entry[field]);
+      if (value && wanted.includes(value)) return entry;
+    }
+  }
+  return null;
+}
+
 // Garment weight comes from the curated size spec (grams per piece). Only sizes that
 // have a measured weight report one — the rest stay blank rather than guessing.
 function itemUnitWeight(item, catalog) {
@@ -165,9 +182,19 @@ export default function Purchase() {
   const [uploading, setUploading] = useState({});
   const [preview, setPreview] = useState(false);
   const [error, setError] = useState('');
+  const [salesOrders, setSalesOrders] = useState([]);
+  const [salesOrderId, setSalesOrderId] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importNote, setImportNote] = useState('');
 
   useEffect(() => {
     api.purchaseCatalog().then(setCatalog).catch((err) => setError(err.message)).finally(() => setLoading(false));
+  }, []);
+
+  // Apparel sales orders from Printshop that don't yet have a purchase order.
+  // Silent if the bridge is unreachable — importing is optional, manual entry stays.
+  useEffect(() => {
+    api.salesOrders().then((res) => setSalesOrders(res.data || [])).catch(() => setSalesOrders([]));
   }, []);
 
   // A restored draft can hold a colour/size the style no longer offers (the catalog
@@ -187,7 +214,9 @@ export default function Purchase() {
 
   const setField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
-    if (field === 'supplier_id') setItems([]);
+    // Changing supplier invalidates any imported line (its matched SKUs belong to
+    // the old supplier's catalog), so clear the items and the sales-order link too.
+    if (field === 'supplier_id') { setItems([]); setSalesOrderId(''); setImportNote(''); }
   };
   const changeItem = (index, field, value) => setItems((current) => current.map((entry, itemIndex) => {
     if (itemIndex !== index) return entry;
@@ -198,6 +227,74 @@ export default function Purchase() {
     }
     return { ...entry, [field]: value };
   }));
+
+  // Pull a Printshop apparel sales order and pre-fill the form: recipient from the
+  // order (falling back to the customer's address), and each line matched to this
+  // supplier's catalog. Unmatched style/color/size stay blank on purpose.
+  const importSalesOrder = async (id) => {
+    setSalesOrderId(id);
+    if (!id) { setImportNote(''); return; }
+    if (!form.supplier_id) { toast.error('Select a fulfillment supplier first, then import'); setSalesOrderId(''); return; }
+    setImporting(true);
+    try {
+      const { data: order } = await api.salesOrder(id);
+      const ship = order.ship_to || {};
+      setForm((current) => ({
+        ...current,
+        recipient_name: order.shipping_name || order.contact_name || ship.name || ship.company_name || current.recipient_name,
+        phone: order.contact_phone || ship.mobile_number || ship.phone || ship.company_phone_number || current.phone,
+        address_line_1: order.shipping_address || ship.address_line1 || current.address_line_1,
+        address_line_2: '',
+        city: ship.city || current.city,
+        state_province: ship.state || current.state_province,
+        postal_code: ship.zip || current.postal_code,
+        country: ship.country || current.country || 'US',
+      }));
+      const styles = catalog.styles.filter((s) => s.supplier_id === form.supplier_id);
+      const colors = catalog.colors.filter((c) => c.supplier_id === form.supplier_id);
+      const sizes = catalog.sizes.filter((s) => s.supplier_id === form.supplier_id);
+      let unmatched = 0;
+      const mapped = (order.items || []).map((it) => {
+        const style = matchCatalog(styles, ['style_name', 'style_no'], it.item, it.model);
+        const color = matchCatalog(colors, ['color_code', 'color_name', 'display_name'], it.color);
+        const size = matchCatalog(sizes, ['size_code', 'size_name'], it.size);
+        if (!style || !color || !size) unmatched += 1;
+        const images = {};
+        if (it.front_image) images.front_print = { url: it.front_image };
+        if (it.front_mockup) images.front_mockup = { url: it.front_mockup };
+        if (it.back_image) images.back_print = { url: it.back_image };
+        if (it.back_mockup) images.back_mockup = { url: it.back_mockup };
+        const bothSides = Boolean(it.back_image || it.back_mockup);
+        return {
+          ...emptyItem(),
+          product_title: it.item || it.style_description || 'Imported item',
+          style_id: style?.style_id || '',
+          style_color_id: color?.style_color_id || '',
+          style_size_id: size?.style_size_id || '',
+          craft_type: style ? (String(style.craft_types || '1').split(',')[0].trim() || '1') : '1',
+          quantity: Number(it.qty) || 1,
+          print_position: bothSides ? '1,2' : (it.front_image ? '1' : ''),
+          specification: [it.color, it.size].filter(Boolean).join(' / '),
+          remark: it.catalog_sku ? `Printshop SKU ${it.catalog_sku}` : '',
+          images,
+        };
+      });
+      setItems(mapped);
+      const total = mapped.length;
+      setImportNote(
+        `Imported ${order.order_number} — ${total} item${total === 1 ? '' : 's'}. ` +
+        (unmatched
+          ? `${unmatched} item${unmatched === 1 ? '' : 's'} need Style/Color/Size confirmed below before placing.`
+          : 'All items matched the supplier catalog — review recipient & artwork, then place.')
+      );
+      toast.success(`Loaded sales order ${order.order_number}`);
+    } catch (err) {
+      toast.error(err.message);
+      setSalesOrderId('');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const syncCatalog = async () => {
     if (!form.supplier_id) return;
@@ -304,20 +401,66 @@ export default function Purchase() {
     return '';
   };
 
+  // A proxy/gateway timeout (504/502/503) or dropped connection is *ambiguous*: the
+  // backend saves the order and places it with the supplier before it replies, so the
+  // timeout often fires while the order is actually going through. Never surface these
+  // as a raw error — verify with the supplier first.
+  const isAmbiguousError = (message) => /\b50[234]\b|gateway|time\s?d?\s?out|timeout|failed to fetch|networkerror|load failed|connection/i.test(String(message || ''));
+
+  // Ask the backend to reconcile this order from the supplier, then read its final
+  // state. Read-only on the supplier side (queryOrderStatus) — never places a
+  // duplicate. Returns the resolved order, or null if it could not be found.
+  const confirmAmbiguousOrder = async (orderNo) => {
+    for (let i = 0; i < 6; i += 1) {
+      try { await api.syncPurchases([orderNo]); } catch { /* supplier not ready yet — retry */ }
+      try {
+        const order = await api.purchase(orderNo);
+        if (order?.submission_status && order.submission_status !== 'Submitting') return order;
+      } catch { /* not queryable yet — retry */ }
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+    try { return await api.purchase(orderNo); } catch { return null; }
+  };
+
+  const finishPlaced = (orderNo, failed) => {
+    clearPersistentState(DRAFT_FORM_KEY);
+    clearPersistentState(DRAFT_ITEMS_KEY);
+    setSalesOrderId('');
+    setImportNote('');
+    navigate('/orders', { state: { createdOrder: orderNo, submissionFailed: failed } });
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     const validationError = validateItems() || validateForm();
     if (validationError) return toast.error(validationError);
+    const orderNo = form.order_no;
     setSubmitting(true);
     try {
-      const result = await api.createPurchase({ ...form, order_time: new Date(form.order_time).toISOString(), items });
-      // Order is saved (whether or not supplier submission succeeded) — clear the draft.
-      clearPersistentState(DRAFT_FORM_KEY);
-      clearPersistentState(DRAFT_ITEMS_KEY);
-      if (result.success) toast.success(`Order ${result.order_no} placed successfully!`);
-      else toast.error(`Order saved, but supplier submission failed: ${result.message}`);
-      navigate('/orders', { state: { createdOrder: result.order_no, submissionFailed: !result.success } });
+      const result = await api.createPurchase({ ...form, order_time: new Date(form.order_time).toISOString(), items, external_sales_order_id: salesOrderId || null });
+      if (result.success) {
+        const po = result.printshop_po;
+        if (po?.po_number) toast.success(`Order ${result.order_no} placed · Printshop PO ${po.po_number} raised`);
+        else if (po?.error) toast.success(`Order ${result.order_no} placed (Printshop PO pending: ${po.error})`);
+        else toast.success(`Order ${result.order_no} placed successfully!`);
+        return finishPlaced(result.order_no, false);
+      }
+      // Saved, but supplier submission reported failure. If that reason is an
+      // ambiguous timeout, the order is often actually placed — reconcile first.
+      if (isAmbiguousError(result.message)) {
+        const order = await confirmAmbiguousOrder(result.order_no);
+        if (order?.submission_status === 'Submitted') { toast.success(`Order ${result.order_no} placed successfully!`); return finishPlaced(result.order_no, false); }
+      }
+      toast.error(`Order saved, but supplier submission failed: ${result.message}`);
+      return finishPlaced(result.order_no, true);
     } catch (err) {
+      // Proxy 504 / dropped connection — the order may already be going through.
+      if (isAmbiguousError(err.message)) {
+        const order = await confirmAmbiguousOrder(orderNo);
+        if (order?.submission_status === 'Submitted') { toast.success(`Order ${orderNo} placed successfully!`); return finishPlaced(orderNo, false); }
+        if (order?.submission_status === 'Failed') { toast.error(`Order saved, but supplier submission failed: ${order.last_sync_error || 'please retry from Orders'}`); return finishPlaced(orderNo, true); }
+        if (order) { toast.success(`Order ${orderNo} saved — confirming with the supplier. It will show in Orders shortly.`); return finishPlaced(orderNo, false); }
+      }
       toast.error(err.message);
     } finally {
       setSubmitting(false);
@@ -353,6 +496,16 @@ export default function Purchase() {
         <Section number="1" title="Supplier Selection">
           <div className="purchase-field full"><label>Fulfillment Supplier *</label><select value={form.supplier_id} onChange={(event) => setField('supplier_id', event.target.value)} required><option value="">— Select Supplier Before Creating Order —</option>{catalog.suppliers.map((supplier) => <option key={supplier.supplier_id} value={supplier.supplier_id} disabled={!supplier.can_place_order}>{supplier.supplier_name} ({supplier.supplier_code}){supplier.can_place_order ? ' — API Connected' : ' — API Not Configured'}</option>)}</select></div>
           {selectedSupplier && <div className={`supplier-choice ${selectedSupplier.can_place_order ? 'ready' : 'blocked'}`}><span>{selectedSupplier.can_place_order ? '✓' : '!'}</span><div><b>{selectedSupplier.supplier_name}</b><small>{selectedSupplier.can_place_order ? `Connected through ${selectedSupplier.api_provider} production API · ${supplierCatalog.styles.length} styles · ${supplierCatalog.colors.length} colors · ${supplierCatalog.sizes.length} sizes` : 'This supplier cannot receive API purchase orders yet.'}</small></div>{selectedSupplier.can_place_order && <button type="button" className="btn supplier-sync" onClick={syncCatalog} disabled={syncingCatalog}>{syncingCatalog ? 'Syncing…' : '↻ Sync Catalog'}</button>}</div>}
+          {selectedSupplier?.can_place_order && <div className="purchase-field full">
+            <label>Import from Sales Order <small>(optional — apparel orders without a PO)</small></label>
+            <SearchSelect
+              value={salesOrderId}
+              options={salesOrders.map((order) => ({ value: order.id, label: `${order.order_number} — ${order.customer_name || 'No customer'}`, hint: `${order.total_qty} pc · ${order.sales_channel || ''}` }))}
+              placeholder={importing ? 'Loading order…' : (salesOrders.length ? '— Pick a sales order to auto-fill —' : '— No apparel orders awaiting a PO —')}
+              onChange={importSalesOrder}
+            />
+            {importNote && <div className="supplier-choice ready" style={{ marginTop: 8 }}><span>↧</span><div><b>Sales order imported</b><small>{importNote}</small></div></div>}
+          </div>}
         </Section>
 
         <fieldset className="purchase-workflow" disabled={!selectedSupplier?.can_place_order}>
