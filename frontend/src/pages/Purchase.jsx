@@ -405,7 +405,7 @@ export default function Purchase() {
   // backend saves the order and places it with the supplier before it replies, so the
   // timeout often fires while the order is actually going through. Never surface these
   // as a raw error — verify with the supplier first.
-  const isAmbiguousError = (message) => /\b50[234]\b|gateway|time\s?d?\s?out|timeout|failed to fetch|networkerror|load failed|connection/i.test(String(message || ''));
+  const isAmbiguousError = (message) => /\b50[234]\b|gateway|time\s?d?\s?out|timeout|failed to fetch|networkerror|load failed|connection|still processing|do not resubmit|正在下单|请勿重复/i.test(String(message || ''));
 
   // Ask the backend to reconcile this order from the supplier, then read its final
   // state. Read-only on the supplier side (queryOrderStatus) — never places a

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { pool, query } from '../db.js';
 import { cloudinaryUpload, cloudinarySignature, supplierConfig, supplierPost, SUPPLIER_STATUSES } from '../supplier.js';
 import { syncRiinCatalog } from '../supplierCatalog.js';
+import { listSalesOrders, getSalesOrder, createPurchaseOrder, printshopConfigured } from '../printshop.js';
 import { wrap } from './crud.js';
 
 const router = Router();
@@ -11,6 +12,30 @@ const imageMimeTypes = new Set(['image/png', 'image/jpeg', 'image/webp']);
 // may or may not have been created. These must be verified, never blindly retried.
 function isAmbiguousSupplierError(message) {
   return /\b50[234]\b|timed out|timeout|gateway|ETIMEDOUT|ECONNRESET|socket hang up/i.test(String(message || ''));
+}
+
+// "正在下单, 请勿重复操作" — the supplier is still processing an earlier submission of
+// this same order (a large order can take minutes while it fetches every artwork).
+// This is NOT a rejection: the order is on its way and must never be resubmitted,
+// so it is treated as in-progress, verified with a longer window, and never
+// surfaced to the user as a raw Chinese error.
+function isInProgressSupplierError(message) {
+  return /正在下单|请勿重复|duplicate|repeat|in progress|being placed|still processing/i.test(String(message || ''));
+}
+const IN_PROGRESS_MESSAGE = 'Supplier is still processing this order — do not resubmit. It will be confirmed automatically once the supplier finishes; check Orders shortly.';
+
+// Decide the outcome of a failed placeOrder call. Returns true when the order was
+// confirmed to exist on the supplier (so it must be marked Submitted, not Failed).
+async function placedDespiteError(orderNo, error) {
+  const inProgress = isInProgressSupplierError(error.message);
+  if (!inProgress && !isAmbiguousSupplierError(error.message)) return false;
+  // Give a supplier that told us it is still working noticeably longer to finish.
+  return inProgress ? orderExistsWithRetry(orderNo, 8, 4000) : orderExistsWithRetry(orderNo);
+}
+// The message stored on a Failed order and shown to the user — readable English,
+// never the supplier's raw Chinese, and explicit that a resubmit is unsafe.
+function failureMessage(error) {
+  return isInProgressSupplierError(error.message) ? IN_PROGRESS_MESSAGE : error.message;
 }
 
 // Returns true if the order already exists on the supplier, false if it
@@ -211,6 +236,26 @@ function supplierPayload(body, orderNo, orderTime, carrier, items) {
   return payload;
 }
 
+// ── Printshop sales orders (import source for a blank order) ──────────────────
+// Declared before the '/:orderNo' routes below so the literal path is not
+// swallowed by the param match. These proxy Printshop's /api/crm bridge so the
+// service secret never leaves the backend.
+
+router.get('/sales-orders', wrap(async (req, res) => {
+  if (!printshopConfigured()) return res.json({ data: [], printshop: false });
+  const data = await listSalesOrders({
+    type: 'apparel',
+    channel: optionalText(req.query?.channel, 20) || '',
+    search: optionalText(req.query?.search, 120) || '',
+  });
+  res.json({ data, printshop: true });
+}));
+
+router.get('/sales-orders/:id', wrap(async (req, res) => {
+  const data = await getSalesOrder(req.params.id);
+  res.json({ data });
+}));
+
 router.get('/catalog', wrap(async (_req, res) => {
   const [suppliers, styles, colors, sizes] = await Promise.all([
     query(`SELECT supplier_id,supplier_code,supplier_name,api_available,api_provider,website,
@@ -330,6 +375,11 @@ router.post('/', wrap(async (req, res) => {
   if (!items.length) throw httpError('Add at least one item');
   const supplier = await fulfillmentSupplier(body.supplier_id);
   const orderNo = requiredText(body.order_no, 'Order ID', 80);
+  // Optional link to the Printshop apparel sales order this blank order fulfils.
+  const externalSalesOrderId = optionalText(body.external_sales_order_id, 40);
+  if (externalSalesOrderId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(externalSalesOrderId)) {
+    throw httpError('Linked sales order id is invalid');
+  }
   const orderTime = new Date(body.order_time);
   if (Number.isNaN(orderTime.getTime())) throw httpError('Order Time is invalid');
   const carrier = optionalText(body.carrier, 30);
@@ -364,20 +414,45 @@ router.post('/', wrap(async (req, res) => {
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }
 
+  // Record which Printshop sales order this fulfils, before the supplier call, so
+  // the link survives even if the supplier or the PO step later fails.
+  if (externalSalesOrderId) {
+    await query(`UPDATE purchases SET external_sales_order_id=$1,external_source='printshop' WHERE purchase_id=$2`, [externalSalesOrderId, purchaseId]);
+  }
+
+  // Once the blanks are placed with the supplier, raise the purchase order back in
+  // Printshop against that sales order. Non-fatal: the blank order is already
+  // placed, so a Printshop hiccup must not fail this request — it is recorded and
+  // surfaced instead. Idempotent on Printshop's side (no duplicate PO).
+  const raisePrintshopPO = async () => {
+    if (!externalSalesOrderId || !printshopConfigured()) return null;
+    try {
+      const po = await createPurchaseOrder(externalSalesOrderId, req.user?.email || '');
+      await query(`UPDATE purchases SET printshop_po_id=$1,printshop_po_number=$2,printshop_po_error=NULL WHERE purchase_id=$3`, [po?.id || null, po?.po_number || null, purchaseId]);
+      return { po_number: po?.po_number || null };
+    } catch (err) {
+      await query(`UPDATE purchases SET printshop_po_error=$1 WHERE purchase_id=$2`, [err.message, purchaseId]).catch(() => {});
+      return { error: err.message };
+    }
+  };
+
   try {
     await supplierPost('/trade/api/interface/placeOrder', payload);
     await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`, [purchaseId]);
-    return res.status(201).json({ success:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Submitted' });
+    const printshop_po = await raisePrintshopPO();
+    return res.status(201).json({ success:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Submitted',printshop_po });
   } catch (error) {
     // A gateway timeout (504 etc.) may mean the order actually went through.
     // The supplier can take a few seconds to register it, so re-verify with
     // retries before deciding — this avoids marking a placed order as Failed.
-    if (isAmbiguousSupplierError(error.message) && (await orderExistsWithRetry(orderNo))) {
+    if (await placedDespiteError(orderNo, error)) {
       await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`, [purchaseId]);
-      return res.status(201).json({ success:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Submitted',note:'Supplier gateway timed out, but the order was confirmed as placed.' });
+      const printshop_po = await raisePrintshopPO();
+      return res.status(201).json({ success:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Submitted',note:'Supplier was slow to respond, but the order was confirmed as placed.',printshop_po });
     }
-    await query(`UPDATE purchases SET submission_status='Failed',last_sync_error=$1 WHERE purchase_id=$2`, [error.message,purchaseId]);
-    return res.status(202).json({ success:false,order_saved:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Failed',message:error.message });
+    const failure = failureMessage(error);
+    await query(`UPDATE purchases SET submission_status='Failed',last_sync_error=$1 WHERE purchase_id=$2`, [failure,purchaseId]);
+    return res.status(202).json({ success:false,order_saved:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Failed',message:failure });
   }
 }));
 
@@ -401,12 +476,13 @@ router.post('/:orderNo/retry', wrap(async (req,res) => {
     res.json({success:true,order_no:order.order_no,submission_status:'Submitted'});
   } catch(error) {
     // If the retry itself times out, re-verify (with retries) before calling it Failed.
-    if (isAmbiguousSupplierError(error.message) && (await orderExistsWithRetry(order.order_no))) {
+    if (await placedDespiteError(order.order_no, error)) {
       await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`,[order.purchase_id]);
-      return res.json({success:true,order_no:order.order_no,submission_status:'Submitted',note:'Supplier gateway timed out, but the order was confirmed as placed.'});
+      return res.json({success:true,order_no:order.order_no,submission_status:'Submitted',note:'Supplier was slow to respond, but the order was confirmed as placed.'});
     }
-    await query(`UPDATE purchases SET submission_status='Failed',last_sync_error=$1 WHERE purchase_id=$2`,[error.message,order.purchase_id]);
-    throw error;
+    const failure = failureMessage(error);
+    await query(`UPDATE purchases SET submission_status='Failed',last_sync_error=$1 WHERE purchase_id=$2`,[failure,order.purchase_id]);
+    throw Object.assign(new Error(failure), { status: error.status || 400 });
   }
 }));
 
