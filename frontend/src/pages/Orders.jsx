@@ -18,6 +18,7 @@ function Status({ value, text }) {
   return <span className={`badge ${status[1]}`}>{status[0]}</span>;
 }
 function SubmissionStatus({ value }) {
+  if (value === 'Submitting') return <span className="badge amber">Sending…</span>;
   const type = value === 'Submitted' ? 'green' : value === 'Failed' ? 'red' : 'amber';
   return <span className={`badge ${type}`}>{value || 'Submitted'}</span>;
 }
@@ -64,13 +65,25 @@ export default function Orders() {
   };
 
   useEffect(() => { const timer = setTimeout(() => setQuery(search.trim()), 350); return () => clearTimeout(timer); }, [search]);
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
     try { setOrders(await api.purchases({ q: query, status })); }
     catch (error) { toast.error(error.message); }
-    finally { setLoading(false); }
+    finally { if (!quiet) setLoading(false); }
   }, [query, status]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [load]);
+
+  // While any order is still being sent to the supplier, keep the list (and an open
+  // drawer) live so it flips to its real status without the user refreshing.
+  const sending = orders.some((order) => order.submission_status === 'Submitting');
+  useEffect(() => {
+    if (!sending) return undefined;
+    const timer = setInterval(() => {
+      load(true);
+      if (selected?.order_no && selected.submission_status === 'Submitting') api.purchase(selected.order_no).then(setSelected).catch(() => {});
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [sending, load, selected?.order_no, selected?.submission_status]);
   useEffect(() => { api.purchaseIntegration().then(setIntegration).catch(() => {}); }, []);
 
   const openOrder = async (orderNo) => {
@@ -84,7 +97,7 @@ export default function Orders() {
     if (!location.state?.createdOrder) return;
     const orderNo = location.state.createdOrder;
     if (location.state.submissionFailed) toast.error(`Order ${orderNo} was saved, but supplier submission failed. Open it and retry.`);
-    else toast.success(`Order ${orderNo} sent to supplier and saved`);
+    else toast.success(`Order ${orderNo} placed — sending to supplier…`);
     navigate('/orders', { replace: true, state: {} });
     openOrder(orderNo);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -132,7 +145,7 @@ export default function Orders() {
 
   const retryOrder = async () => {
     setSaving(true);
-    try { await api.retryPurchase(selected.order_no); toast.success('Order submitted to supplier'); await load(); await openOrder(selected.order_no); }
+    try { const result = await api.retryPurchase(selected.order_no); toast.success(result.note || 'Retry queued — sending to supplier…'); await load(); await openOrder(selected.order_no); }
     catch (error) { toast.error(error.message); await openOrder(selected.order_no); }
     finally { setSaving(false); }
   };
@@ -178,7 +191,7 @@ export default function Orders() {
             <div><h4 className="order-block-title">Items ({detailItems.length})</h4>{detailItems.map((item) => <div className="order-detail-item" key={item.purchase_item_id}><b>{item.product_title}</b><div className="order-item-tags"><span>{item.style_no}</span><span>{item.color_name || item.color_code}</span><span>{item.size_code}</span><span>Qty: {item.quantity}</span><span>{Number(item.craft_type) === 2 ? 'DTG' : 'Heat Transfer'}</span></div><div className="order-item-images">{(item.images || []).filter((image) => image.image_role.includes('print')).map((image) => <img key={image.purchase_image_id} className="order-thumb-clickable" src={image.image_url} alt={image.image_role} title="Click to enlarge" onClick={() => setLightbox({ url: image.image_url, role: image.image_role })} />)}</div></div>)}</div>
             <div><h4 className="order-block-title">Notes</h4><textarea className="order-notes" rows="3" value={selected.notes || ''} onChange={(event) => setSelected((current) => ({ ...current, notes: event.target.value }))} placeholder="Add a note…" /><button className="btn sm" onClick={saveNotes} disabled={saving}>Save Notes</button></div>
             {tracking && <div><h4 className="order-block-title">Tracking</h4><div className="order-tracking">{tracking.trackingNumber ? <><b>📬 {tracking.trackingNumber}</b>{tracking.shippingTime && <span>Shipped: {dateTime(tracking.shippingTime)}</span>}{tracking.waybillDataPath && <a href={tracking.waybillDataPath} target="_blank" rel="noreferrer">Download waybill →</a>}</> : 'No tracking information available yet.'}</div></div>}
-            {selected.last_sync_error && <div className="error-box">{selected.last_sync_error}</div>}
+            {selected.last_sync_error && <div className={selected.submission_status === 'Submitting' ? 'orders-muted' : 'error-box'}>{selected.last_sync_error}</div>}
           </div>
           <div className="order-drawer-foot">{selected.submission_status === 'Failed' && <div className="order-retry-row"><button className="btn primary" onClick={retryOrder} disabled={saving}>{saving ? 'Retrying…' : '↻ Retry Supplier Submission'}</button></div>}<div><button className="btn" onClick={() => sync([selected.order_no])} disabled={syncing || selected.submission_status !== 'Submitted'}>↻ Sync Status</button><button className="btn" onClick={getTracking} disabled={selected.submission_status !== 'Submitted'}>📦 Tracking</button></div><div><button className="btn" onClick={() => setShippingOpen(true)} disabled={selected.submission_status !== 'Submitted'}>✎ Update Shipping</button>{selected.submission_status === 'Submitted' && ![13, 15].includes(Number(selected.supplier_status)) && <button className="btn danger" onClick={closeOrder} disabled={saving}>× Close Order</button>}</div></div>
         </>}

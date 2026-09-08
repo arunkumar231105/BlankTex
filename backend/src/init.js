@@ -205,6 +205,26 @@ async function migrate() {
     ALTER TABLE purchases ADD COLUMN IF NOT EXISTS synced_at TIMESTAMPTZ;
     ALTER TABLE purchases ADD COLUMN IF NOT EXISTS supplier_id UUID REFERENCES suppliers (supplier_id) ON DELETE RESTRICT;
     ALTER TABLE purchases ADD COLUMN IF NOT EXISTS submission_status VARCHAR(30) NOT NULL DEFAULT 'Submitted';
+    -- Link back to the Printshop apparel sales order this blank order fulfils, and
+    -- the purchase order Printshop raised for it once the blanks were placed. Kept
+    -- here (not a hard FK — Printshop's tables live in another schema) so a
+    -- purchase can be traced to its sales order and never double-ordered.
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS external_sales_order_id UUID;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS external_source VARCHAR(30);
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS printshop_po_id UUID;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS printshop_po_number VARCHAR(40);
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS printshop_po_error TEXT;
+    CREATE INDEX IF NOT EXISTS ix_purchases_external_sales_order ON purchases (external_sales_order_id);
+    -- Background supplier submission (orderSubmission.js): when the worker should
+    -- next act, the claim it holds while acting, when the payload was last actually
+    -- sent and how often, and when the current submission cycle began (a manual
+    -- Retry starts a new cycle).
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS submit_next_at TIMESTAMPTZ;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS submit_locked_at TIMESTAMPTZ;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS submit_sent_at TIMESTAMPTZ;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS submit_attempts INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS submit_started_at TIMESTAMPTZ;
+    CREATE INDEX IF NOT EXISTS ix_purchases_submit_due ON purchases (submission_status, submit_next_at);
     CREATE INDEX IF NOT EXISTS ix_purchases_supplier_status ON purchases (supplier_status);
     CREATE INDEX IF NOT EXISTS ix_purchases_supplier ON purchases (supplier_id);
 

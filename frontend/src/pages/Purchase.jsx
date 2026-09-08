@@ -401,66 +401,22 @@ export default function Purchase() {
     return '';
   };
 
-  // A proxy/gateway timeout (504/502/503) or dropped connection is *ambiguous*: the
-  // backend saves the order and places it with the supplier before it replies, so the
-  // timeout often fires while the order is actually going through. Never surface these
-  // as a raw error — verify with the supplier first.
-  const isAmbiguousError = (message) => /\b50[234]\b|gateway|time\s?d?\s?out|timeout|failed to fetch|networkerror|load failed|connection|still processing|do not resubmit|正在下单|请勿重复/i.test(String(message || ''));
-
-  // Ask the backend to reconcile this order from the supplier, then read its final
-  // state. Read-only on the supplier side (queryOrderStatus) — never places a
-  // duplicate. Returns the resolved order, or null if it could not be found.
-  const confirmAmbiguousOrder = async (orderNo) => {
-    for (let i = 0; i < 6; i += 1) {
-      try { await api.syncPurchases([orderNo]); } catch { /* supplier not ready yet — retry */ }
-      try {
-        const order = await api.purchase(orderNo);
-        if (order?.submission_status && order.submission_status !== 'Submitting') return order;
-      } catch { /* not queryable yet — retry */ }
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-    }
-    try { return await api.purchase(orderNo); } catch { return null; }
-  };
-
-  const finishPlaced = (orderNo, failed) => {
-    clearPersistentState(DRAFT_FORM_KEY);
-    clearPersistentState(DRAFT_ITEMS_KEY);
-    setSalesOrderId('');
-    setImportNote('');
-    navigate('/orders', { state: { createdOrder: orderNo, submissionFailed: failed } });
-  };
-
   const submit = async (event) => {
     event.preventDefault();
     const validationError = validateItems() || validateForm();
     if (validationError) return toast.error(validationError);
-    const orderNo = form.order_no;
     setSubmitting(true);
     try {
+      // The backend saves the order and answers at once; a background worker sends
+      // it to the supplier, and the Orders page shows it confirm on its own. No
+      // waiting on the supplier here means no timeouts and no false "Failed".
       const result = await api.createPurchase({ ...form, order_time: new Date(form.order_time).toISOString(), items, external_sales_order_id: salesOrderId || null });
-      if (result.success) {
-        const po = result.printshop_po;
-        if (po?.po_number) toast.success(`Order ${result.order_no} placed · Printshop PO ${po.po_number} raised`);
-        else if (po?.error) toast.success(`Order ${result.order_no} placed (Printshop PO pending: ${po.error})`);
-        else toast.success(`Order ${result.order_no} placed successfully!`);
-        return finishPlaced(result.order_no, false);
-      }
-      // Saved, but supplier submission reported failure. If that reason is an
-      // ambiguous timeout, the order is often actually placed — reconcile first.
-      if (isAmbiguousError(result.message)) {
-        const order = await confirmAmbiguousOrder(result.order_no);
-        if (order?.submission_status === 'Submitted') { toast.success(`Order ${result.order_no} placed successfully!`); return finishPlaced(result.order_no, false); }
-      }
-      toast.error(`Order saved, but supplier submission failed: ${result.message}`);
-      return finishPlaced(result.order_no, true);
+      clearPersistentState(DRAFT_FORM_KEY);
+      clearPersistentState(DRAFT_ITEMS_KEY);
+      setSalesOrderId('');
+      setImportNote('');
+      navigate('/orders', { state: { createdOrder: result.order_no, submissionFailed: result.success === false } });
     } catch (err) {
-      // Proxy 504 / dropped connection — the order may already be going through.
-      if (isAmbiguousError(err.message)) {
-        const order = await confirmAmbiguousOrder(orderNo);
-        if (order?.submission_status === 'Submitted') { toast.success(`Order ${orderNo} placed successfully!`); return finishPlaced(orderNo, false); }
-        if (order?.submission_status === 'Failed') { toast.error(`Order saved, but supplier submission failed: ${order.last_sync_error || 'please retry from Orders'}`); return finishPlaced(orderNo, true); }
-        if (order) { toast.success(`Order ${orderNo} saved — confirming with the supplier. It will show in Orders shortly.`); return finishPlaced(orderNo, false); }
-      }
       toast.error(err.message);
     } finally {
       setSubmitting(false);

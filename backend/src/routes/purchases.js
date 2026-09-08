@@ -2,64 +2,15 @@ import { Router } from 'express';
 import { pool, query } from '../db.js';
 import { cloudinaryUpload, cloudinarySignature, supplierConfig, supplierPost, SUPPLIER_STATUSES } from '../supplier.js';
 import { syncRiinCatalog } from '../supplierCatalog.js';
-import { listSalesOrders, getSalesOrder, createPurchaseOrder, printshopConfigured } from '../printshop.js';
+import { listSalesOrders, getSalesOrder, printshopConfigured } from '../printshop.js';
+import { kickSubmissionWorker } from '../orderSubmission.js';
 import { wrap } from './crud.js';
 
 const router = Router();
 const imageMimeTypes = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
-// A 504/502/503 or timeout from the supplier gateway is ambiguous — the order
-// may or may not have been created. These must be verified, never blindly retried.
-function isAmbiguousSupplierError(message) {
-  return /\b50[234]\b|timed out|timeout|gateway|ETIMEDOUT|ECONNRESET|socket hang up/i.test(String(message || ''));
-}
-
-// "正在下单, 请勿重复操作" — the supplier is still processing an earlier submission of
-// this same order (a large order can take minutes while it fetches every artwork).
-// This is NOT a rejection: the order is on its way and must never be resubmitted,
-// so it is treated as in-progress, verified with a longer window, and never
-// surfaced to the user as a raw Chinese error.
-function isInProgressSupplierError(message) {
-  return /正在下单|请勿重复|duplicate|repeat|in progress|being placed|still processing/i.test(String(message || ''));
-}
-const IN_PROGRESS_MESSAGE = 'Supplier is still processing this order — do not resubmit. It will be confirmed automatically once the supplier finishes; check Orders shortly.';
-
-// Decide the outcome of a failed placeOrder call. Returns true when the order was
-// confirmed to exist on the supplier (so it must be marked Submitted, not Failed).
-async function placedDespiteError(orderNo, error) {
-  const inProgress = isInProgressSupplierError(error.message);
-  if (!inProgress && !isAmbiguousSupplierError(error.message)) return false;
-  // Give a supplier that told us it is still working noticeably longer to finish.
-  return inProgress ? orderExistsWithRetry(orderNo, 8, 4000) : orderExistsWithRetry(orderNo);
-}
-// The message stored on a Failed order and shown to the user — readable English,
-// never the supplier's raw Chinese, and explicit that a resubmit is unsafe.
-function failureMessage(error) {
-  return isInProgressSupplierError(error.message) ? IN_PROGRESS_MESSAGE : error.message;
-}
-
-// Returns true if the order already exists on the supplier, false if it
-// confirmed does not, or null if we could not verify (e.g. the check itself failed).
-async function orderExistsOnSupplier(orderNo) {
-  try {
-    const result = await supplierPost('/trade/api/interface/queryOrderInfo', { platformOidList: [orderNo] });
-    return Boolean(result.data?.[0] || result.records?.[0]);
-  } catch {
-    return null;
-  }
-}
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// After an ambiguous 504/timeout the supplier often registers the order a few
-// seconds later, so re-check several times before concluding it truly failed.
-async function orderExistsWithRetry(orderNo, attempts = 4, delayMs = 2500) {
-  for (let i = 0; i < attempts; i += 1) {
-    if ((await orderExistsOnSupplier(orderNo)) === true) return true;
-    if (i < attempts - 1) await sleep(delayMs);
-  }
-  return false;
-}
+// Supplier submission itself lives in ../orderSubmission.js: orders are saved here
+// and handed to a background worker, so this router never waits on the supplier.
 
 function httpError(message, status = 400) { return Object.assign(new Error(message), { status }); }
 function requiredText(value, label, max = 250) {
@@ -420,70 +371,28 @@ router.post('/', wrap(async (req, res) => {
     await query(`UPDATE purchases SET external_sales_order_id=$1,external_source='printshop' WHERE purchase_id=$2`, [externalSalesOrderId, purchaseId]);
   }
 
-  // Once the blanks are placed with the supplier, raise the purchase order back in
-  // Printshop against that sales order. Non-fatal: the blank order is already
-  // placed, so a Printshop hiccup must not fail this request — it is recorded and
-  // surfaced instead. Idempotent on Printshop's side (no duplicate PO).
-  const raisePrintshopPO = async () => {
-    if (!externalSalesOrderId || !printshopConfigured()) return null;
-    try {
-      const po = await createPurchaseOrder(externalSalesOrderId, req.user?.email || '');
-      await query(`UPDATE purchases SET printshop_po_id=$1,printshop_po_number=$2,printshop_po_error=NULL WHERE purchase_id=$3`, [po?.id || null, po?.po_number || null, purchaseId]);
-      return { po_number: po?.po_number || null };
-    } catch (err) {
-      await query(`UPDATE purchases SET printshop_po_error=$1 WHERE purchase_id=$2`, [err.message, purchaseId]).catch(() => {});
-      return { error: err.message };
-    }
-  };
-
-  try {
-    await supplierPost('/trade/api/interface/placeOrder', payload);
-    await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`, [purchaseId]);
-    const printshop_po = await raisePrintshopPO();
-    return res.status(201).json({ success:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Submitted',printshop_po });
-  } catch (error) {
-    // A gateway timeout (504 etc.) may mean the order actually went through.
-    // The supplier can take a few seconds to register it, so re-verify with
-    // retries before deciding — this avoids marking a placed order as Failed.
-    if (await placedDespiteError(orderNo, error)) {
-      await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`, [purchaseId]);
-      const printshop_po = await raisePrintshopPO();
-      return res.status(201).json({ success:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Submitted',note:'Supplier was slow to respond, but the order was confirmed as placed.',printshop_po });
-    }
-    const failure = failureMessage(error);
-    await query(`UPDATE purchases SET submission_status='Failed',last_sync_error=$1 WHERE purchase_id=$2`, [failure,purchaseId]);
-    return res.status(202).json({ success:false,order_saved:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Failed',message:failure });
-  }
+  // Hand the order to the background submission worker and answer immediately.
+  // Talking to the supplier can take minutes for a large order, so it never happens
+  // inside this request: the user gets an instant confirmation and the Orders page
+  // shows the order move from Sending… to its real status on its own. The worker
+  // also raises the Printshop PO once the supplier has confirmed.
+  await query(`UPDATE purchases SET submit_started_at=NOW(),submit_next_at=NOW() WHERE purchase_id=$1`, [purchaseId]);
+  kickSubmissionWorker();
+  return res.status(201).json({ success:true,purchase_id:purchaseId,order_no:orderNo,submission_status:'Submitting' });
 }));
 
 router.post('/:orderNo/retry', wrap(async (req,res) => {
   const order=(await query(`SELECT p.*,sup.api_provider,sup.api_available FROM purchases p LEFT JOIN suppliers sup ON sup.supplier_id=p.supplier_id WHERE p.order_no=$1`,[req.params.orderNo])).rows[0];
   if(!order) throw httpError('Order not found',404);
   if(order.submission_status==='Submitted') throw httpError('Order has already been submitted');
+  if(order.submission_status==='Submitting') throw httpError('Order is already being sent to the supplier');
   if(!order.supplier_payload?.platformOid) throw httpError('Saved supplier payload is missing');
   await fulfillmentSupplier(order.supplier_id);
-  await query(`UPDATE purchases SET submission_status='Submitting',last_sync_error=NULL WHERE purchase_id=$1`,[order.purchase_id]);
-  // Guard against duplicates: a prior failure (e.g. a 504) may have actually
-  // created the order. If it already exists on the supplier, mark it Submitted
-  // instead of placing it again.
-  if ((await orderExistsOnSupplier(order.order_no)) === true) {
-    await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`,[order.purchase_id]);
-    return res.json({success:true,order_no:order.order_no,submission_status:'Submitted',note:'Order already existed on the supplier — marked Submitted, no duplicate created.'});
-  }
-  try {
-    await supplierPost('/trade/api/interface/placeOrder',order.supplier_payload);
-    await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`,[order.purchase_id]);
-    res.json({success:true,order_no:order.order_no,submission_status:'Submitted'});
-  } catch(error) {
-    // If the retry itself times out, re-verify (with retries) before calling it Failed.
-    if (await placedDespiteError(order.order_no, error)) {
-      await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW() WHERE purchase_id=$1`,[order.purchase_id]);
-      return res.json({success:true,order_no:order.order_no,submission_status:'Submitted',note:'Supplier was slow to respond, but the order was confirmed as placed.'});
-    }
-    const failure = failureMessage(error);
-    await query(`UPDATE purchases SET submission_status='Failed',last_sync_error=$1 WHERE purchase_id=$2`,[failure,order.purchase_id]);
-    throw Object.assign(new Error(failure), { status: error.status || 400 });
-  }
+  // Re-queue for the background worker. It always looks for the order on the
+  // supplier before sending, so a retry can never create a duplicate.
+  await query(`UPDATE purchases SET submission_status='Submitting',last_sync_error=NULL,submit_started_at=NOW(),submit_next_at=NOW(),submit_sent_at=NULL,submit_locked_at=NULL WHERE purchase_id=$1`,[order.purchase_id]);
+  kickSubmissionWorker();
+  res.json({success:true,order_no:order.order_no,submission_status:'Submitting',note:'Retry queued — the order is being sent to the supplier and will confirm automatically.'});
 }));
 
 router.get('/:orderNo', wrap(async (req, res) => {

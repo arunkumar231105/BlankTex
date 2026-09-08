@@ -22,6 +22,7 @@ import auth from './routes/auth.js';
 import purchases from './routes/purchases.js';
 import { authRequired } from './auth.js';
 import { startStockScheduler, startOrderSyncScheduler } from './scheduler.js';
+import { startSubmissionWorker } from './orderSubmission.js';
 
 const app = express();
 app.use(cors());
@@ -75,4 +76,5 @@ app.listen(PORT, () => {
   console.log(`BlankTex API listening on http://localhost:${PORT}`);
   startStockScheduler();
   startOrderSyncScheduler();
+  startSubmissionWorker();
 });

@@ -69,6 +69,8 @@ export const api = {
     `/decorations/print-areas/by-style/${id}${qs({ process_type: processType })}`,
   ),
   purchaseCatalog: () => request('/purchases/catalog'),
+  salesOrders: (params) => request(`/purchases/sales-orders${qs(params || {})}`),
+  salesOrder: (id) => request(`/purchases/sales-orders/${encodeURIComponent(id)}`),
   syncPurchaseCatalog: (supplierId) => request('/purchases/catalog/sync', { method: 'POST', body: { supplier_id: supplierId } }),
   createPurchase: (body) => request('/purchases', { method: 'POST', body }),
   uploadPurchaseImage: (body) => request('/purchases/upload', { method: 'POST', body }),
