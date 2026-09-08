@@ -3,7 +3,7 @@ import { pool, query } from '../db.js';
 import { cloudinaryUpload, cloudinarySignature, supplierConfig, supplierPost, SUPPLIER_STATUSES } from '../supplier.js';
 import { syncRiinCatalog } from '../supplierCatalog.js';
 import { listSalesOrders, getSalesOrder, printshopConfigured } from '../printshop.js';
-import { kickSubmissionWorker } from '../orderSubmission.js';
+import { kickSubmissionWorker, orderExistsOnSupplier } from '../orderSubmission.js';
 import { wrap } from './crud.js';
 
 const router = Router();
@@ -388,11 +388,18 @@ router.post('/:orderNo/retry', wrap(async (req,res) => {
   if(order.submission_status==='Submitting') throw httpError('Order is already being sent to the supplier');
   if(!order.supplier_payload?.platformOid) throw httpError('Saved supplier payload is missing');
   await fulfillmentSupplier(order.supplier_id);
-  // Re-queue for the background worker. It always looks for the order on the
-  // supplier before sending, so a retry can never create a duplicate.
+  // Retry is the ONLY way an order can be sent a second time, so check the
+  // supplier right here first: if it already holds the order, just mark it
+  // Submitted and send nothing.
+  if ((await orderExistsOnSupplier(order.order_no)) === true) {
+    await query(`UPDATE purchases SET status='Placed',submission_status='Submitted',last_sync_error=NULL,synced_at=NOW(),submit_locked_at=NULL,submit_next_at=NULL WHERE purchase_id=$1`,[order.purchase_id]);
+    return res.json({success:true,order_no:order.order_no,submission_status:'Submitted',note:'Order already exists on the supplier — marked Submitted. Nothing was resent.'});
+  }
+  // Otherwise start a new cycle for the background worker, which re-confirms the
+  // order is absent (twice) before its single send.
   await query(`UPDATE purchases SET submission_status='Submitting',last_sync_error=NULL,submit_started_at=NOW(),submit_next_at=NOW(),submit_sent_at=NULL,submit_locked_at=NULL WHERE purchase_id=$1`,[order.purchase_id]);
   kickSubmissionWorker();
-  res.json({success:true,order_no:order.order_no,submission_status:'Submitting',note:'Retry queued — the order is being sent to the supplier and will confirm automatically.'});
+  res.json({success:true,order_no:order.order_no,submission_status:'Submitting',note:'Retry queued — the supplier will be checked again before anything is sent, so the order cannot be placed twice.'});
 }));
 
 router.get('/:orderNo', wrap(async (req, res) => {

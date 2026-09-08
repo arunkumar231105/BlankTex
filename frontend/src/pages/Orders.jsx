@@ -145,6 +145,9 @@ export default function Orders() {
 
   const retryOrder = async () => {
     setSaving(true);
+    // Retry is the only path that can ever send an order a second time — make the
+    // human confirm they have checked the supplier portal first.
+    if (!window.confirm(`Retry ${selected.order_no}?\n\nOnly do this if the order is NOT already on the supplier portal. The supplier is checked again before anything is sent, but please confirm you have looked.`)) return;
     try { const result = await api.retryPurchase(selected.order_no); toast.success(result.note || 'Retry queued — sending to supplier…'); await load(); await openOrder(selected.order_no); }
     catch (error) { toast.error(error.message); await openOrder(selected.order_no); }
     finally { setSaving(false); }

@@ -8,23 +8,34 @@
 //   Failed    — the supplier explicitly rejected it (a real business error), or it
 //               never appeared after hours of trying and a human needs to look.
 // A timeout, gateway error or "still processing" reply is NEVER a failure here:
-// the worker keeps verifying until the supplier shows the order, and only re-sends
-// once the supplier's processing window has clearly passed — always looking for
-// the order first, so nothing is ever placed twice.
+// the worker keeps verifying until the supplier shows the order.
+//
+// HARD RULE — an order is never placed twice (a duplicate is real money lost):
+//   * The payload is sent at most ONCE per cycle. Once submit_sent_at is set the
+//     worker only verifies; it never resends on its own, however long it waits.
+//   * Before that single send the supplier must confirm the order is absent twice
+//     (queryOrderInfo, 3s apart) plus once via queryOrderStatus. Any failed check
+//     means "unknown" and nothing is sent.
+//   * A second send can only come from a human clicking Retry, which starts a new
+//     cycle — and that cycle still runs the same absence checks first.
+//   * The supplier itself dedups on platformOid (= our order_no), and order_no is
+//     unique in our database, as two further independent layers.
 import { query } from './db.js';
 import { supplierPost, SUPPLIER_STATUSES } from './supplier.js';
 import { createPurchaseOrder, printshopConfigured } from './printshop.js';
 
-const POLL_MS = 5_000;                    // how often the worker looks for due work
-const VERIFY_RETRY_MS = 20_000;           // re-check cadence while waiting on the supplier
-const RESEND_AFTER_MS = 15 * 60_000;      // re-send only once the supplier has clearly given up
-const GIVE_UP_AFTER_MS = 6 * 60 * 60_000; // escalate to Failed for a human after this long
-const LOCK_STALE_MINUTES = 10;            // a crashed worker's claim expires after this
+const POLL_MS = 5_000;                     // how often the worker looks for due work
+const VERIFY_RETRY_MS = 20_000;            // re-check cadence while waiting on the supplier
+const CONFIRM_WINDOW_MS = 30 * 60_000;     // after the single send, how long to keep verifying before a human must look
+const UNREACHABLE_AFTER_MS = 2 * 60 * 60_000; // never sent because the supplier could not be checked for this long
+const ABSENCE_RECHECK_MS = 3_000;          // gap between the two absence checks before sending
+const LOCK_STALE_MINUTES = 10;             // a crashed worker's claim expires after this
 const BATCH = 5;
 
 const IN_PROGRESS_MESSAGE = 'Supplier is still processing this order — it will confirm automatically.';
 const SLOW_MESSAGE = 'Supplier was slow to respond — confirming the order…';
-const GAVE_UP_MESSAGE = 'Supplier never confirmed this order after repeated attempts — check the supplier portal, then Retry.';
+const NEEDS_REVIEW_MESSAGE = 'Sent to the supplier once but never confirmed. It was NOT resent automatically — check the supplier portal for this order number before using Retry, so it is not placed twice.';
+const UNREACHABLE_MESSAGE = 'Could not reach the supplier to place this order (nothing was sent). Retry once the supplier is reachable.';
 
 // A timeout / connection failure / gateway error: the supplier may or may not have
 // taken the order. supplier.js reports these as status 502.
@@ -48,6 +59,25 @@ export async function orderExistsOnSupplier(orderNo) {
   } catch {
     return null;
   }
+}
+
+// Stronger than one lookup: the supplier must say "not found" twice, a few seconds
+// apart, on queryOrderInfo AND once on queryOrderStatus. Only then is it safe to
+// send. Returns true if confirmed absent, false if found anywhere, null if any
+// check failed (unknown — never send on unknown).
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+async function confirmedAbsentOnSupplier(orderNo) {
+  const first = await orderExistsOnSupplier(orderNo);
+  if (first !== false) return first;
+  try {
+    const status = await supplierPost('/trade/api/interface/queryOrderStatus', { platformOidList: [orderNo] });
+    if ((status.data || []).length) return false;
+  } catch {
+    return null;
+  }
+  await sleep(ABSENCE_RECHECK_MS);
+  const second = await orderExistsOnSupplier(orderNo);
+  return second === false ? true : second;
 }
 
 // Best-effort: pull the live supplier status right away so the Orders page shows
@@ -104,16 +134,28 @@ export async function processOrder(order) {
   if (exists === true) return markSubmitted(order);
   if (exists === null) return defer(order, SLOW_MESSAGE, VERIFY_RETRY_MS);
 
-  // 2. Not there yet, but we sent it recently — the supplier may still be working
-  //    on it (big orders take minutes). Wait and re-check; never resend into that.
-  const sentAgo = order.submit_sent_at ? Date.now() - new Date(order.submit_sent_at).getTime() : null;
-  if (sentAgo !== null && sentAgo < RESEND_AFTER_MS) return defer(order, IN_PROGRESS_MESSAGE, VERIFY_RETRY_MS);
+  // 2. Already sent once in this cycle? Then we ONLY verify — never resend. The
+  //    supplier may still be working on it (big orders take minutes); if it has not
+  //    shown up within the window, a human must check the portal before any Retry.
+  if (order.submit_sent_at) {
+    const sentAgo = Date.now() - new Date(order.submit_sent_at).getTime();
+    return sentAgo < CONFIRM_WINDOW_MS
+      ? defer(order, IN_PROGRESS_MESSAGE, VERIFY_RETRY_MS)
+      : markFailed(order, NEEDS_REVIEW_MESSAGE);
+  }
 
-  // 3. Only after a very long time with nothing to show does a human need to look.
+  // 3. Never sent, and the supplier has been unreachable for hours — stop trying
+  //    (nothing was sent, so a Retry later is safe) and let a human know.
   const startedAgo = Date.now() - new Date(order.submit_started_at || order.created_at).getTime();
-  if (startedAgo > GIVE_UP_AFTER_MS) return markFailed(order, GAVE_UP_MESSAGE);
+  if (startedAgo > UNREACHABLE_AFTER_MS) return markFailed(order, UNREACHABLE_MESSAGE);
 
-  // 4. Send it.
+  // 4. The one and only send of this cycle — but first the supplier must confirm,
+  //    more than once, that it does not already hold the order.
+  const absent = await confirmedAbsentOnSupplier(order.order_no);
+  if (absent === false) return markSubmitted(order);
+  if (absent !== true) return defer(order, SLOW_MESSAGE, VERIFY_RETRY_MS);
+  // Record the send BEFORE calling out: if we crash mid-call, the next tick must
+  // treat this order as possibly sent and only verify.
   await query(`UPDATE purchases SET submit_sent_at=NOW(),submit_attempts=COALESCE(submit_attempts,0)+1 WHERE purchase_id=$1`, [order.purchase_id]);
   try {
     await supplierPost('/trade/api/interface/placeOrder', order.supplier_payload);
@@ -131,7 +173,8 @@ async function tick() {
   if (running) return;
   running = true;
   try {
-    // Claim due orders atomically so a slow batch can never be picked up twice.
+    // Claim due orders atomically. FOR UPDATE SKIP LOCKED makes this safe even if
+    // several workers ever run at once: no two can claim the same order.
     const { rows } = await query(`
       UPDATE purchases SET submit_locked_at=NOW()
        WHERE purchase_id IN (
@@ -139,7 +182,8 @@ async function tick() {
           WHERE submission_status='Submitting'
             AND (submit_next_at IS NULL OR submit_next_at<=NOW())
             AND (submit_locked_at IS NULL OR submit_locked_at<NOW()-INTERVAL '${LOCK_STALE_MINUTES} minutes')
-          ORDER BY created_at LIMIT ${BATCH})
+          ORDER BY created_at LIMIT ${BATCH}
+          FOR UPDATE SKIP LOCKED)
        RETURNING *`);
     await Promise.all(rows.map((order) => processOrder(order).catch((error) => {
       console.error(`[submit-worker] ${order.order_no}:`, error.message);
